@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grocery App</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+</head>
+<body class="bg-gray-100 p-4">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    function GroceryApp() {
+      const defaultData = {
+        Winco: ["Seeds", "Nuts"],
+        Walmart: ["Fruit Pouch", "Broccoli", "Water Absorption Mat", "Sugarcane"],
+        Sams: [],
+        Costco: ["Fish", "Aussie Bites"],
+        IndiaBazar: ["Dhaniya", "Thorai Packet"],
+      };
+
+      const [items, setItems] = React.useState(defaultData);
+
+      const handleCheck = (store, item) => {
+        setItems((prev) => ({
+          ...prev,
+          [store]: prev[store].filter((i) => i !== item),
+        }));
+      };
+
+      const resetList = () => {
+        setItems(defaultData);
+      };
+
+      return (
+        <div className="max-w-3xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4 text-center">Grocery List (Store Wise)</h1>
+
+          <button
+            onClick={resetList}
+            className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-xl shadow"
+          >
+            RESET LIST
+          </button>
+
+          <div className="grid grid-cols-1 gap-4">
+            {Object.keys(items).map((store) => (
+              <div key={store} className="bg-white rounded-2xl shadow p-4">
+                <h2 className="text-xl font-semibold mb-2">{store}</h2>
+                {items[store].length === 0 && (
+                  <p className="text-gray-500">All checked!</p>
+                )}
+                <ul className="space-y-2">
+                  {items[store].map((item) => (
+                    <li key={item} className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        onChange={() => handleCheck(store, item)}
+                        className="h-5 w-5"
+                      />
+                      <span className="text-lg">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<GroceryApp />);
+  </script>
+</body>
+</html>
