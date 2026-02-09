@@ -30,34 +30,30 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
-   
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyA-Ii0hMgfY11g7DkTada1-lbvtOGVNSXU",
-    authDomain: "groceryapp-f3d45.firebaseapp.com",
-    databaseURL: "https://groceryapp-f3d45-default-rtdb.firebaseio.com",
-    projectId: "groceryapp-f3d45",
-    storageBucket: "groceryapp-f3d45.firebasestorage.app",
-    messagingSenderId: "366437105357",
-    appId: "1:366437105357:web:f4d50390f998bbe8927384"
-  };
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://your-project-id-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
- 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    export const groceryRef = ref(db, 'grocery');
+    const groceryRef = ref(db, 'grocery');
+
+    window.firebaseRefs = { groceryRef, set, onValue }; // make accessible globally for React code
   </script>
 </head>
 <body class="bg-gray-100 p-4">
   <div id="root"></div>
 
   <script type="text/babel">
-    import { groceryRef, set, onValue } from './firebase-config.js';
-
     function GroceryApp() {
+      const { groceryRef, set, onValue } = window.firebaseRefs;
+
       const defaultData = {
         Winco: ["Seeds", "Nuts"],
         Walmart: ["Fruit Pouch", "Broccoli", "Water Absorption Mat", "Sugarcane"],
@@ -66,7 +62,7 @@
         IndiaBazar: ["Dhaniya", "Thorai Packet"],
       };
 
-      const [masterData, setMasterData] = React.useState(defaultData);
+      const [masterData, setMasterDataState] = React.useState(defaultData);
       const [items, setItems] = React.useState(defaultData);
       const [pendingRemove, setPendingRemove] = React.useState({});
       const [undoQueue, setUndoQueue] = React.useState([]);
@@ -78,7 +74,7 @@
           const data = snapshot.val();
           if (data) {
             setItems(data.items || defaultData);
-            setMasterData(data.masterData || defaultData);
+            setMasterDataState(data.masterData || defaultData);
           }
         });
       }, []);
@@ -89,20 +85,14 @@
       };
 
       const handleCheck = (store, item) => {
-        setPendingRemove((prev) => ({
-          ...prev,
-          [store]: [...(prev[store] || []), item],
-        }));
-        setUndoQueue((prev) => [...prev, { store, item }]);
+        setPendingRemove(prev => ({ ...prev, [store]: [...(prev[store] || []), item] }));
+        setUndoQueue(prev => [...prev, { store, item }]);
         setTimeout(() => {
-          const newItems = {
-            ...items,
-            [store]: items[store].filter((i) => i !== item)
-          };
+          const newItems = { ...items, [store]: items[store].filter(i => i !== item) };
           setItems(newItems);
           const newPending = { ...pendingRemove, [store]: (pendingRemove[store] || []).filter(i => i !== item) };
           setPendingRemove(newPending);
-          setUndoQueue((prev) => prev.filter((q) => q.item !== item || q.store !== store));
+          setUndoQueue(prev => prev.filter(q => q.item !== item || q.store !== store));
           saveToFirebase(newItems, masterData);
         }, 30000);
       };
@@ -110,12 +100,10 @@
       const undoCheck = (store, item) => {
         const newPending = { ...pendingRemove, [store]: (pendingRemove[store] || []).filter(i => i !== item) };
         setPendingRemove(newPending);
-        setUndoQueue((prev) => prev.filter((q) => q.item !== item || q.store !== store));
+        setUndoQueue(prev => prev.filter(q => q.item !== item || q.store !== store));
       };
 
-      const undoAll = () => {
-        undoQueue.forEach(q => undoCheck(q.store, q.item));
-      };
+      const undoAll = () => { undoQueue.forEach(q => undoCheck(q.store, q.item)); };
 
       const resetList = () => {
         setItems(masterData);
@@ -129,7 +117,7 @@
         const newItems = { ...items, [store]: [...items[store], ...newItemsArr] };
         const newMaster = { ...masterData, [store]: [...masterData[store], ...newItemsArr] };
         setItems(newItems);
-        setMasterData(newMaster);
+        setMasterDataState(newMaster);
         setNewItemText(prev => ({ ...prev, [store]: '' }));
         saveToFirebase(newItems, newMaster);
       };
