@@ -77,19 +77,22 @@
       };
 
       const handleCheck = (store, item) => {
-        const updatedPending = { ...pendingRemove };
+        if (!undoQueue.some(q => q.item === item)) {
+          setUndoQueue(prev => [...prev, { item }]);
+        }
+
+        const updatedPending = {};
         Object.keys(items).forEach(s => {
           if (items[s].includes(item)) {
-            updatedPending[s] = [...(updatedPending[s] || []), item];
+            updatedPending[s] = [...(pendingRemove[s] || []), item];
           }
         });
         setPendingRemove(updatedPending);
-        setUndoQueue(prev => [...prev, { item }]);
 
         setTimeout(() => {
-          const newItems = { ...items };
-          Object.keys(newItems).forEach(s => {
-            newItems[s] = newItems[s].filter(i => i !== item);
+          const newItems = {};
+          Object.keys(items).forEach(s => {
+            newItems[s] = items[s].filter(i => i !== item);
           });
 
           const newPending = {};
@@ -109,7 +112,7 @@
         const newPending = { ...pendingRemove };
 
         Object.keys(masterData).forEach(store => {
-          if (masterData[store].includes(item) && !(newItems[store] || []).includes(item)) {
+          if (masterData[store].includes(item) && !newItems[store].includes(item)) {
             newItems[store] = [...(newItems[store] || []), item];
           }
           if (newPending[store]) {
@@ -120,6 +123,7 @@
         setItems(newItems);
         setPendingRemove(newPending);
         setUndoQueue(prev => prev.filter(q => q.item !== item));
+        saveToFirebase(newItems, masterData);
       };
 
       const undoAll = () => undoQueue.forEach(q => undoCheck(q.item));
@@ -196,7 +200,12 @@
 
                         {isPending && <button onClick={() => undoCheck(item)} className="ml-auto text-sm text-blue-600 underline">Undo</button>}
 
-                        <button onClick={() => deleteItem(item)} className="ml-2 text-sm text-red-600 underline">Delete</button>
+                        {/* Trash icon delete button */}
+                        <button onClick={() => deleteItem(item)} className="ml-2 text-red-600 hover:text-red-800">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
                       </li>
                     );
                   })}
