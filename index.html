@@ -76,6 +76,12 @@
         undoQueue.forEach(q => undoCheck(q.store, q.item));
       };
 
+      const resetList = () => {
+        setItems(defaultData);
+        setPendingRemove({});
+        setUndoQueue([]);
+      };
+
       return (
         <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-3xl font-bold mb-4 text-center">Grocery List (Store Wise)</h1>
@@ -88,7 +94,7 @@
           )}
 
           <button
-            onClick={() => setItems(defaultData)}
+            onClick={resetList}
             className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-xl shadow"
           >
             RESET LIST
