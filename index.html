@@ -3,26 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Grocery App</title>
+  <title>Grocery App PWA</title>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
   <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#3b82f6">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="apple-touch-icon" href="icon-192.png">
-
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    .fade-collapse {
+      transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+      overflow: hidden;
+    }
+    .collapsed {
+      opacity: 0;
+      max-height: 0;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
 </head>
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(() => console.log('Service Worker Registered'))
-      .catch((err) => console.log('Service Worker Failed:', err));
-  }
-</script>
-
 <body class="bg-gray-100 p-4">
   <div id="root"></div>
 
@@ -37,24 +40,55 @@
       };
 
       const [items, setItems] = React.useState(defaultData);
+      const [pendingRemove, setPendingRemove] = React.useState({});
+      const [undoQueue, setUndoQueue] = React.useState([]);
 
       const handleCheck = (store, item) => {
-        setItems((prev) => ({
+        setPendingRemove((prev) => ({
           ...prev,
-          [store]: prev[store].filter((i) => i !== item),
+          [store]: [...(prev[store] || []), item],
         }));
+
+        setUndoQueue((prev) => [...prev, { store, item }]);
+
+        setTimeout(() => {
+          setItems((prev) => ({
+            ...prev,
+            [store]: prev[store].filter((i) => i !== item),
+          }));
+          setPendingRemove((prev) => ({
+            ...prev,
+            [store]: (prev[store] || []).filter((i) => i !== item),
+          }));
+          setUndoQueue((prev) => prev.filter((q) => q.item !== item || q.store !== store));
+        }, 30000);
       };
 
-      const resetList = () => {
-        setItems(defaultData);
+      const undoCheck = (store, item) => {
+        setPendingRemove((prev) => ({
+          ...prev,
+          [store]: (prev[store] || []).filter((i) => i !== item),
+        }));
+        setUndoQueue((prev) => prev.filter((q) => q.item !== item || q.store !== store));
+      };
+
+      const undoAll = () => {
+        undoQueue.forEach(q => undoCheck(q.store, q.item));
       };
 
       return (
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-3xl font-bold mb-4 text-center">Grocery List (Store Wise)</h1>
 
+          {undoQueue.length > 0 && (
+            <div className="mb-4 bg-yellow-100 p-3 rounded-lg flex justify-between items-center">
+              <span>Item{undoQueue.length > 1 ? 's' : ''} checked. Undo?</span>
+              <button onClick={undoAll} className="ml-4 text-blue-600 underline">Undo All</button>
+            </div>
+          )}
+
           <button
-            onClick={resetList}
+            onClick={() => setItems(defaultData)}
             className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-xl shadow"
           >
             RESET LIST
@@ -64,20 +98,32 @@
             {Object.keys(items).map((store) => (
               <div key={store} className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-2">{store}</h2>
-                {items[store].length === 0 && (
-                  <p className="text-gray-500">All checked!</p>
-                )}
+                {items[store].length === 0 && <p className="text-gray-500">All checked!</p>}
                 <ul className="space-y-2">
-                  {items[store].map((item) => (
-                    <li key={item} className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        onChange={() => handleCheck(store, item)}
-                        className="h-5 w-5"
-                      />
-                      <span className="text-lg">{item}</span>
-                    </li>
-                  ))}
+                  {items[store].map((item) => {
+                    const isPending = (pendingRemove[store] || []).includes(item);
+                    return (
+                      <li
+                        key={item}
+                        className={`flex items-center gap-3 fade-collapse ${isPending ? 'collapsed' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          onChange={() => handleCheck(store, item)}
+                          className="h-5 w-5"
+                        />
+                        <span className="text-lg">{item}</span>
+                        {isPending && (
+                          <button
+                            onClick={() => undoCheck(store, item)}
+                            className="ml-auto text-sm text-blue-600 underline"
+                          >
+                            Undo
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
@@ -87,6 +133,14 @@
     }
 
     ReactDOM.createRoot(document.getElementById("root")).render(<GroceryApp />);
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('Service Worker Registered'))
+        .catch((err) => console.log('Service Worker Failed:', err));
+    }
   </script>
 </body>
 </html>
