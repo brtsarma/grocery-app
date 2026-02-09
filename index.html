@@ -48,7 +48,6 @@
       const [undoQueue, setUndoQueue] = React.useState([]);
       const [newItemText, setNewItemText] = React.useState({});
 
-      // Save masterData and items to localStorage whenever they change
       React.useEffect(() => {
         localStorage.setItem("groceryMasterData", JSON.stringify(masterData));
       }, [masterData]);
@@ -62,9 +61,7 @@
           ...prev,
           [store]: [...(prev[store] || []), item],
         }));
-
         setUndoQueue((prev) => [...prev, { store, item }]);
-
         setTimeout(() => {
           setItems((prev) => ({
             ...prev,
@@ -96,18 +93,19 @@
         setUndoQueue([]);
       };
 
-      const addItem = (store) => {
-        const text = newItemText[store]?.trim();
-        if (!text) return;
+      const addItem = (store, text) => {
+        const item = text?.trim();
+        if (!item) return;
+        const newItems = item.split(",").map(i => i.trim()).filter(Boolean);
 
         setItems((prev) => ({
           ...prev,
-          [store]: [...prev[store], text],
+          [store]: [...prev[store], ...newItems],
         }));
 
         setMasterData((prev) => ({
           ...prev,
-          [store]: [...prev[store], text],
+          [store]: [...prev[store], ...newItems],
         }));
 
         setNewItemText((prev) => ({ ...prev, [store]: "" }));
@@ -139,13 +137,13 @@
                 <div className="flex mt-2 gap-2">
                   <input
                     type="text"
-                    placeholder="Add item"
+                    placeholder="Add item(s), comma separated"
                     value={newItemText[store] || ""}
                     onChange={(e) => setNewItemText((prev) => ({ ...prev, [store]: e.target.value }))}
                     className="border rounded px-2 py-1 flex-1"
                   />
                   <button
-                    onClick={() => addItem(store)}
+                    onClick={() => addItem(store, newItemText[store])}
                     className="bg-green-600 text-white px-3 py-1 rounded"
                   >
                     Add
