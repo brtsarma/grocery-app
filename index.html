@@ -26,7 +26,6 @@
     }
   </style>
   <script type="module">
-    // Firebase setup
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
     import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
 
@@ -44,7 +43,7 @@
     const db = getDatabase(app);
     const groceryRef = ref(db, 'grocery');
 
-    window.firebaseRefs = { groceryRef, set, onValue }; // make accessible globally for React code
+    window.firebaseRefs = { groceryRef, set, onValue }; // global access for React
   </script>
 </head>
 <body class="bg-gray-100 p-4">
@@ -68,7 +67,7 @@
       const [undoQueue, setUndoQueue] = React.useState([]);
       const [newItemText, setNewItemText] = React.useState({});
 
-      // Load from Firebase
+      // Load from Firebase and initialize if empty
       React.useEffect(() => {
         onValue(groceryRef, (snapshot) => {
           const data = snapshot.val();
@@ -76,15 +75,19 @@
             setItems(data.items || defaultData);
             setMasterDataState(data.masterData || defaultData);
           } else {
-            // If no data in Firebase, initialize with default
-            set(groceryRef, { items: defaultData, masterData: defaultData });
+            // Initialize Firebase with default data if empty
+            set(groceryRef, { items: defaultData, masterData: defaultData })
+              .then(() => console.log('Firebase initialized with default data'))
+              .catch(err => console.error('Firebase init error:', err));
           }
         });
       }, []);
 
-      // Save to Firebase
+      // Save to Firebase with error handling
       const saveToFirebase = (newItems, newMaster) => {
-        set(groceryRef, { items: newItems, masterData: newMaster });
+        set(groceryRef, { items: newItems, masterData: newMaster })
+          .then(() => console.log('Saved to Firebase'))
+          .catch(err => console.error('Firebase save error:', err));
       };
 
       const handleCheck = (store, item) => {
@@ -106,7 +109,7 @@
         setUndoQueue(prev => prev.filter(q => q.item !== item || q.store !== store));
       };
 
-      const undoAll = () => { undoQueue.forEach(q => undoCheck(q.store, q.item)); };
+      const undoAll = () => undoQueue.forEach(q => undoCheck(q.store, q.item));
 
       const resetList = () => {
         setItems(masterData);
@@ -117,6 +120,7 @@
 
       const addItem = (store, text) => {
         const newItemsArr = text.split(',').map(i => i.trim()).filter(Boolean);
+        if (newItemsArr.length === 0) return;
         const newItems = { ...items, [store]: [...items[store], ...newItemsArr] };
         const newMaster = { ...masterData, [store]: [...masterData[store], ...newItemsArr] };
         setItems(newItems);
