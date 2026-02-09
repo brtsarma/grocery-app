@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Grocery App PWA</title>
+  <title>Grocery App PWA with Firebase</title>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -25,11 +25,32 @@
       padding: 0;
     }
   </style>
+  <script type="module">
+    // Firebase setup
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    export const groceryRef = ref(db, 'grocery');
+  </script>
 </head>
 <body class="bg-gray-100 p-4">
   <div id="root"></div>
 
   <script type="text/babel">
+    import { groceryRef, set, onValue } from './firebase-config.js';
+
     function GroceryApp() {
       const defaultData = {
         Winco: ["Seeds", "Nuts"],
@@ -39,22 +60,27 @@
         IndiaBazar: ["Dhaniya", "Thorai Packet"],
       };
 
-      const storedMaster = JSON.parse(localStorage.getItem("groceryMasterData"));
-      const storedItems = JSON.parse(localStorage.getItem("groceryItems"));
-
-      const [masterData, setMasterData] = React.useState(storedMaster || defaultData);
-      const [items, setItems] = React.useState(storedItems || (storedMaster || defaultData));
+      const [masterData, setMasterData] = React.useState(defaultData);
+      const [items, setItems] = React.useState(defaultData);
       const [pendingRemove, setPendingRemove] = React.useState({});
       const [undoQueue, setUndoQueue] = React.useState([]);
       const [newItemText, setNewItemText] = React.useState({});
 
+      // Load from Firebase
       React.useEffect(() => {
-        localStorage.setItem("groceryMasterData", JSON.stringify(masterData));
-      }, [masterData]);
+        onValue(groceryRef, (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setItems(data.items || defaultData);
+            setMasterData(data.masterData || defaultData);
+          }
+        });
+      }, []);
 
-      React.useEffect(() => {
-        localStorage.setItem("groceryItems", JSON.stringify(items));
-      }, [items]);
+      // Save to Firebase
+      const saveToFirebase = (newItems, newMaster) => {
+        set(groceryRef, { items: newItems, masterData: newMaster });
+      };
 
       const handleCheck = (store, item) => {
         setPendingRemove((prev) => ({
@@ -63,23 +89,21 @@
         }));
         setUndoQueue((prev) => [...prev, { store, item }]);
         setTimeout(() => {
-          setItems((prev) => ({
-            ...prev,
-            [store]: prev[store].filter((i) => i !== item),
-          }));
-          setPendingRemove((prev) => ({
-            ...prev,
-            [store]: (prev[store] || []).filter((i) => i !== item),
-          }));
+          const newItems = {
+            ...items,
+            [store]: items[store].filter((i) => i !== item)
+          };
+          setItems(newItems);
+          const newPending = { ...pendingRemove, [store]: (pendingRemove[store] || []).filter(i => i !== item) };
+          setPendingRemove(newPending);
           setUndoQueue((prev) => prev.filter((q) => q.item !== item || q.store !== store));
+          saveToFirebase(newItems, masterData);
         }, 30000);
       };
 
       const undoCheck = (store, item) => {
-        setPendingRemove((prev) => ({
-          ...prev,
-          [store]: (prev[store] || []).filter((i) => i !== item),
-        }));
+        const newPending = { ...pendingRemove, [store]: (pendingRemove[store] || []).filter(i => i !== item) };
+        setPendingRemove(newPending);
         setUndoQueue((prev) => prev.filter((q) => q.item !== item || q.store !== store));
       };
 
@@ -91,89 +115,46 @@
         setItems(masterData);
         setPendingRemove({});
         setUndoQueue([]);
+        saveToFirebase(masterData, masterData);
       };
 
       const addItem = (store, text) => {
-        const item = text?.trim();
-        if (!item) return;
-        const newItems = item.split(",").map(i => i.trim()).filter(Boolean);
-
-        setItems((prev) => ({
-          ...prev,
-          [store]: [...prev[store], ...newItems],
-        }));
-
-        setMasterData((prev) => ({
-          ...prev,
-          [store]: [...prev[store], ...newItems],
-        }));
-
-        setNewItemText((prev) => ({ ...prev, [store]: "" }));
+        const newItemsArr = text.split(',').map(i => i.trim()).filter(Boolean);
+        const newItems = { ...items, [store]: [...items[store], ...newItemsArr] };
+        const newMaster = { ...masterData, [store]: [...masterData[store], ...newItemsArr] };
+        setItems(newItems);
+        setMasterData(newMaster);
+        setNewItemText(prev => ({ ...prev, [store]: '' }));
+        saveToFirebase(newItems, newMaster);
       };
 
       return (
         <div className="max-w-3xl mx-auto p-4">
           <h1 className="text-3xl font-bold mb-4 text-center">Grocery List (Store Wise)</h1>
-
           {undoQueue.length > 0 && (
             <div className="mb-4 bg-yellow-100 p-3 rounded-lg flex justify-between items-center">
               <span>Item{undoQueue.length > 1 ? 's' : ''} checked. Undo?</span>
               <button onClick={undoAll} className="ml-4 text-blue-600 underline">Undo All</button>
             </div>
           )}
-
-          <button
-            onClick={resetList}
-            className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-xl shadow"
-          >
-            RESET LIST
-          </button>
-
+          <button onClick={resetList} className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-xl shadow">RESET LIST</button>
           <div className="grid grid-cols-1 gap-4">
-            {Object.keys(items).map((store) => (
+            {Object.keys(items).map(store => (
               <div key={store} className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-2">{store}</h2>
-
                 <div className="flex mt-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add item(s), comma separated"
-                    value={newItemText[store] || ""}
-                    onChange={(e) => setNewItemText((prev) => ({ ...prev, [store]: e.target.value }))}
-                    className="border rounded px-2 py-1 flex-1"
-                  />
-                  <button
-                    onClick={() => addItem(store, newItemText[store])}
-                    className="bg-green-600 text-white px-3 py-1 rounded"
-                  >
-                    Add
-                  </button>
+                  <input type="text" placeholder="Add item(s), comma separated" value={newItemText[store] || ''} onChange={e => setNewItemText(prev => ({ ...prev, [store]: e.target.value }))} className="border rounded px-2 py-1 flex-1" />
+                  <button onClick={() => addItem(store, newItemText[store])} className="bg-green-600 text-white px-3 py-1 rounded">Add</button>
                 </div>
-
                 {items[store].length === 0 && <p className="text-gray-500 mt-2">All checked!</p>}
-
                 <ul className="space-y-2 mt-2">
-                  {items[store].map((item) => {
+                  {items[store].map(item => {
                     const isPending = (pendingRemove[store] || []).includes(item);
                     return (
-                      <li
-                        key={item}
-                        className={`flex items-center gap-3 fade-collapse ${isPending ? 'collapsed' : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          onChange={() => handleCheck(store, item)}
-                          className="h-5 w-5"
-                        />
+                      <li key={item} className={`flex items-center gap-3 fade-collapse ${isPending ? 'collapsed' : ''}`}>
+                        <input type="checkbox" onChange={() => handleCheck(store, item)} className="h-5 w-5" />
                         <span className="text-lg">{item}</span>
-                        {isPending && (
-                          <button
-                            onClick={() => undoCheck(store, item)}
-                            className="ml-auto text-sm text-blue-600 underline"
-                          >
-                            Undo
-                          </button>
-                        )}
+                        {isPending && <button onClick={() => undoCheck(store, item)} className="ml-auto text-sm text-blue-600 underline">Undo</button>}
                       </li>
                     );
                   })}
@@ -185,15 +166,7 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<GroceryApp />);
-  </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('Service Worker Registered'))
-        .catch((err) => console.log('Service Worker Failed:', err));
-    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<GroceryApp />);
   </script>
 </body>
 </html>
