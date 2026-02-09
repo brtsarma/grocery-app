@@ -39,9 +39,23 @@
         IndiaBazar: ["Dhaniya", "Thorai Packet"],
       };
 
-      const [items, setItems] = React.useState(defaultData);
+      const storedMaster = JSON.parse(localStorage.getItem("groceryMasterData"));
+      const storedItems = JSON.parse(localStorage.getItem("groceryItems"));
+
+      const [masterData, setMasterData] = React.useState(storedMaster || defaultData);
+      const [items, setItems] = React.useState(storedItems || (storedMaster || defaultData));
       const [pendingRemove, setPendingRemove] = React.useState({});
       const [undoQueue, setUndoQueue] = React.useState([]);
+      const [newItemText, setNewItemText] = React.useState({});
+
+      // Save masterData and items to localStorage whenever they change
+      React.useEffect(() => {
+        localStorage.setItem("groceryMasterData", JSON.stringify(masterData));
+      }, [masterData]);
+
+      React.useEffect(() => {
+        localStorage.setItem("groceryItems", JSON.stringify(items));
+      }, [items]);
 
       const handleCheck = (store, item) => {
         setPendingRemove((prev) => ({
@@ -77,9 +91,26 @@
       };
 
       const resetList = () => {
-        setItems(defaultData);
+        setItems(masterData);
         setPendingRemove({});
         setUndoQueue([]);
+      };
+
+      const addItem = (store) => {
+        const text = newItemText[store]?.trim();
+        if (!text) return;
+
+        setItems((prev) => ({
+          ...prev,
+          [store]: [...prev[store], text],
+        }));
+
+        setMasterData((prev) => ({
+          ...prev,
+          [store]: [...prev[store], text],
+        }));
+
+        setNewItemText((prev) => ({ ...prev, [store]: "" }));
       };
 
       return (
@@ -104,8 +135,26 @@
             {Object.keys(items).map((store) => (
               <div key={store} className="bg-white rounded-2xl shadow p-4">
                 <h2 className="text-xl font-semibold mb-2">{store}</h2>
-                {items[store].length === 0 && <p className="text-gray-500">All checked!</p>}
-                <ul className="space-y-2">
+
+                <div className="flex mt-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add item"
+                    value={newItemText[store] || ""}
+                    onChange={(e) => setNewItemText((prev) => ({ ...prev, [store]: e.target.value }))}
+                    className="border rounded px-2 py-1 flex-1"
+                  />
+                  <button
+                    onClick={() => addItem(store)}
+                    className="bg-green-600 text-white px-3 py-1 rounded"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {items[store].length === 0 && <p className="text-gray-500 mt-2">All checked!</p>}
+
+                <ul className="space-y-2 mt-2">
                   {items[store].map((item) => {
                     const isPending = (pendingRemove[store] || []).includes(item);
                     return (
