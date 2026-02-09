@@ -40,11 +40,16 @@
       const { groceryRef, set, onValue } = window.firebaseRefs;
 
       const defaultData = {
-        Winco: ["Seeds", "Nuts"],
-        Walmart: ["Strawberry","Blueberry","Cilantro","Bell pepper","Cucumber","Organic spinach","Iceberg cabbage","Tomatoes","Avocados","Onion","Potatoes","Garlic","Cherry tomatoes","Banana","Chicken Breast","Organic mozzarella cheese sticks","Baby Bel","Tea milk","Probiotic Yogurt","Taco Fire Sauce","Salad dressing"],
-        Sams: [],
-        Costco: ["Fish", "Aussie Bites"],
-        IndiaBazar: ["Dhaniya", "Thorai Packet"],
+       Winco: ["Seeds", "Nuts"],
+
+Walmart: ["Strawberry", "Blueberry", "Cilantro", "Bell pepper", "Cucumber", "Organic spinach", "Iceberg cabbage", "Tomatoes", "Avocados", "Onion", "Potatoes", "Garlic", "Cherry tomatoes", "Banana", "Chicken Breast", "Organic mozzarella cheese sticks", "Baby Bel", "Tea milk", "Probiotic Yogurt", "Taco Fire Sauce", "Salad dressing"],
+
+Sams: ["Protien bar", "Once upon a Farm Pouch", "Salmon", "Wipes", "Diaper", "Cottage cheese", "Lance Peanut biscuit", "Cauliflower", "Mushroom", "Capsicum", "Asparagus", "Iceberg cabbage", "Tea Milk", "Organic Milk", "Organic Egg"],
+
+Costco: ["Fish", "Aussie Bites"],
+
+IndiaBazar: ["Dhaniya", "Thorai Packet"]
+
       };
 
       const [masterData, setMasterDataState] = React.useState(defaultData);
