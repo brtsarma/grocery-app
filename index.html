@@ -69,9 +69,23 @@ function GroceryApp() {
 
   const handleCheck = (store, itemName) => {
     const newData = {...data};
-    newData[store] = newData[store].map(item => 
-      item.name === itemName ? {...item, checked: !item.checked} : item
-    );
+
+    // Determine current checked state for this item across ALL stores
+    let isCheckedSomewhere = false;
+    Object.keys(newData).forEach(storeName => {
+      if (newData[storeName]?.some(item => item.name === itemName && item.checked)) {
+        isCheckedSomewhere = true;
+      }
+    });
+    const newChecked = !isCheckedSomewhere;
+
+    // Apply this checked state to the same item across ALL stores
+    Object.keys(newData).forEach(storeName => {
+      newData[storeName] = newData[storeName].map(item =>
+        item.name === itemName ? {...item, checked: newChecked} : item
+      );
+    });
+
     setData(newData);
     saveToFirebase(newData);
   };
