@@ -111,8 +111,13 @@ function GroceryApp() {
   };
 
   const resetList = () => {
-    setData(masterData);
-    saveToFirebase(masterData);
+    // Restore the full list from masterData and ensure everything is unchecked
+    const resetData = {};
+    Object.keys(masterData).forEach(store => {
+      resetData[store] = masterData[store].map(item => ({ ...item, checked: false }));
+    });
+    setData(resetData);
+    saveToFirebase(resetData);
   };
 
   const prevStore = () => setCurrentStoreIndex(i => Math.max(i-1,0));
