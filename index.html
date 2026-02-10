@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Grocery List</title>
 <script src="https://cdn.tailwindcss.com"></script>
 
@@ -14,37 +14,60 @@
 .swipe { transition:transform .28s; touch-action:pan-y; }
 .swiped { transform:translateX(-90px); }
 
-/* Dark mode */
-.dark body { background:#0d0d0d; color:#f1f1f1; }
-.dark .card { background:#1a1a1a!important; border-color:#333!important; }
-
 /* Floating reset button */
 #resetBtn {
  position:fixed; bottom:28px; right:28px; background:#2563eb;
  color:white; font-size:22px; padding:16px; border-radius:50%;
  box-shadow:0 4px 14px rgba(0,0,0,.3); z-index:999;
 }
+
+/* Slider container */
+#sliderContainer {
+  display:flex;
+  overflow:hidden;
+  width:100%;
+  scroll-behavior:smooth;
+}
+
+/* Slider inner track */
+#sliderTrack {
+  display:flex;
+  transition:transform 0.4s ease;
+  width:100%;
+}
+
+/* Each store card */
+.storeCard {
+  min-width:100%;
+  flex-shrink:0;
+  margin-right:1rem;
+}
 </style>
 </head>
 
-<body class="bg-gray-100 dark:bg-black">
+<body class="bg-gray-100">
 
 <!-- Header -->
-<header class="text-center py-5 text-2xl font-semibold bg-white dark:bg-neutral-900 shadow">
+<header class="text-center py-5 text-2xl font-semibold bg-white shadow">
   My Grocery List
 </header>
 
 <!-- Tabs -->
-<div class="overflow-x-auto whitespace-nowrap flex gap-3 px-4 py-3 bg-gray-50 dark:bg-neutral-800">
-  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('Walmart')">🛒 Walmart</button>
-  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('Costco')">🥥 Costco</button>
-  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('Sams')">🧺 Sams</button>
-  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('WinCo')">🌾 WinCo</button>
-  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('IndiaBazar')">🍅 India Bazar</button>
+<div class="overflow-x-auto whitespace-nowrap flex gap-3 px-4 py-3 bg-gray-50">
+  <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(0)">🛒 Walmart</button>
+  <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(1)">🥥 Costco</button>
+  <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(2)">🧺 Sams</button>
+  <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(3)">🌾 WinCo</button>
+  <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(4)">🍅 India Bazar</button>
 </div>
 
-<!-- Store Container -->
-<div id="storeContainer" class="p-4 flex flex-col gap-6"></div>
+<!-- Slider container -->
+<div id="sliderContainer" class="relative p-4">
+  <div id="sliderTrack"></div>
+  <!-- Arrows -->
+  <button id="prevBtn" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white px-3 py-2 rounded-full shadow" onclick="prevStore()">‹</button>
+  <button id="nextBtn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white px-3 py-2 rounded-full shadow" onclick="nextStore()">›</button>
+</div>
 
 <!-- Reset Button -->
 <button id="resetBtn" onclick="resetList()">⟳</button>
@@ -62,15 +85,18 @@ let masterData = {
 let data = JSON.parse(localStorage.getItem("groceries")) || JSON.parse(JSON.stringify(masterData));
 
 /* ---------------------- RENDER STORES ---------------------- */
+const storeNames = Object.keys(data);
+let currentStoreIndex = 0;
+
 function renderStores() {
-  let html = "";
-  Object.keys(data).forEach(store => {
-    html += `
-    <div id="${store}" class="card bg-white dark:bg-neutral-900 rounded-2xl shadow p-4 border">
+  const track = document.getElementById("sliderTrack");
+  track.innerHTML = "";
+  storeNames.forEach(store => {
+    let html = `<div class="storeCard card bg-white rounded-2xl shadow p-4 border">
       <h2 class="text-xl font-semibold mb-3">${store}</h2>
       <ul class="space-y-2">
         ${data[store].map(item => `
-          <li class="flex items-center justify-between swipe bg-gray-50 dark:bg-neutral-800 px-3 py-2 rounded-lg" 
+          <li class="flex items-center justify-between swipe bg-gray-50 px-3 py-2 rounded-lg" 
               ontouchstart="startSwipe(event,this)" ontouchmove="moveSwipe(event,this)" ontouchend="endSwipe(event,this,'${store}','${item}')">
             <div class="flex items-center gap-2">
               <input type="checkbox" onclick="checkItem('${item}')" />
@@ -81,45 +107,53 @@ function renderStores() {
                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/>
               </svg>
             </button>
-          </li>
-        `).join("")}
+          </li>`).join("")}
       </ul>
     </div>`;
+    track.innerHTML += html;
   });
-
-  document.getElementById("storeContainer").innerHTML = html;
+  updateSlider();
 }
 renderStores();
+
+/* ---------------------- SLIDER CONTROL ---------------------- */
+function updateSlider() {
+  const track = document.getElementById("sliderTrack");
+  track.style.transform = `translateX(-${currentStoreIndex*100}%)`;
+}
+function prevStore() {
+  if(currentStoreIndex>0) currentStoreIndex--;
+  updateSlider();
+}
+function nextStore() {
+  if(currentStoreIndex<storeNames.length-1) currentStoreIndex++;
+  updateSlider();
+}
+function goToStore(index) {
+  currentStoreIndex = index;
+  updateSlider();
+}
 
 /* ---------------------- CHECK & REMOVE ---------------------- */
 function checkItem(item) {
   let elements = [...document.querySelectorAll("li")].filter(li => li.innerText.includes(item));
   elements.forEach(el => el.classList.add("fade-out"));
-
   setTimeout(() => {
-    Object.keys(data).forEach(store => {
-      data[store] = data[store].filter(i => i !== item);
-    });
-    save();
-    renderStores();
+    Object.keys(data).forEach(store => data[store] = data[store].filter(i=>i!==item));
+    save(); renderStores();
   }, 350);
 }
 
 /* ---------------------- DELETE ---------------------- */
 function deleteItem(item) {
-  Object.keys(data).forEach(store => {
-    data[store] = data[store].filter(i => i !== item);
-  });
-  masterData[store] = masterData[store]?.filter(i => i !== item);
-  save();
-  renderStores();
+  Object.keys(data).forEach(store => data[store] = data[store].filter(i=>i!==item));
+  save(); renderStores();
 }
 
 /* ---------------------- RESET ---------------------- */
 function resetList() {
   data = JSON.parse(JSON.stringify(masterData));
-  save();
-  renderStores();
+  save(); renderStores();
 }
 
 /* ---------------------- SAVE ---------------------- */
@@ -127,27 +161,11 @@ function save() {
   localStorage.setItem("groceries", JSON.stringify(data));
 }
 
-/* ---------------------- SCROLL TO CARD ---------------------- */
-function scrollToCard(id) {
-  document.getElementById(id).scrollIntoView({ behavior: "smooth", block: "center" });
-}
-
 /* ---------------------- SWIPE DELETE ---------------------- */
-let startX = 0;
-
-function startSwipe(e, item) {
-  startX = e.touches[0].clientX;
-}
-
-function moveSwipe(e, item) {
-  let diff = e.touches[0].clientX - startX;
-  if (diff < -40) item.classList.add("swiped");
-}
-
-function endSwipe(e, item, store, itemName) {
-  if (item.classList.contains("swiped")) deleteItem(itemName);
-  else item.classList.remove("swiped");
-}
+let startX=0;
+function startSwipe(e,item){startX=e.touches[0].clientX;}
+function moveSwipe(e,item){let diff=e.touches[0].clientX-startX;if(diff<-40)item.classList.add("swiped");}
+function endSwipe(e,item,store,itemName){if(item.classList.contains("swiped")) deleteItem(itemName); else item.classList.remove("swiped");}
 </script>
 
 </body>
