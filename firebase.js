@@ -1,13 +1,6 @@
 // firebase.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
 import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-database.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA-Ii0hMgfY11g7DkTada1-lbvtOGVNSXU",
@@ -23,16 +16,4 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const groceryRef = ref(db, "grocery");
 
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-
-export {
-  groceryRef,
-  set,
-  onValue,
-  auth,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  provider,
-};
+export { groceryRef, set, onValue };
