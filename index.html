@@ -24,21 +24,11 @@
     groceryRef,
     set,
     onValue,
-    auth,
-    onAuthStateChanged,
-    signInWithPopup,
-    signOut,
-    provider,
   } from './firebase.js';
   window.firebaseRefs = {
     groceryRef,
     set,
     onValue,
-    auth,
-    onAuthStateChanged,
-    signInWithPopup,
-    signOut,
-    provider,
   };
 </script>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -56,11 +46,6 @@ function GroceryApp() {
     groceryRef,
     set,
     onValue,
-    auth,
-    onAuthStateChanged,
-    signInWithPopup,
-    signOut,
-    provider,
   } = window.firebaseRefs;
 
   const defaultStoreData = {
@@ -88,14 +73,14 @@ function GroceryApp() {
   const [newRecipeName, setNewRecipeName] = React.useState('');
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [viewMode, setViewMode] = React.useState('store'); // 'store' or 'recipe'
-  const [user, setUser] = React.useState(null);
-  const [authLoading, setAuthLoading] = React.useState(true);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [loginForm, setLoginForm] = React.useState({ username: '', password: '' });
+  const [loginError, setLoginError] = React.useState('');
 
   React.useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setAuthLoading(false);
-    });
+    if (window.localStorage && window.localStorage.getItem('groceryLoggedIn') === '1') {
+      setIsLoggedIn(true);
+    }
 
     onValue(groceryRef, snapshot => {
       const val = snapshot.val() || {};
@@ -136,9 +121,6 @@ function GroceryApp() {
 
       set(groceryRef, { stores: loadedStores, recipes: loadedRecipes });
     });
-    return () => {
-      unsubAuth();
-    };
   }, []);
 
   const saveToFirebase = (nextStores, nextRecipes) => {
@@ -270,43 +252,63 @@ function GroceryApp() {
 
   const activeData = viewMode === 'store' ? storeData : recipeData;
 
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (e) {
-      console.error(e);
-      alert('Login failed. Please try again.');
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    const { username, password } = loginForm;
+    if (username === 'admin' && password === 'grocery123') {
+      setIsLoggedIn(true);
+      setLoginError('');
+      if (window.localStorage) {
+        window.localStorage.setItem('groceryLoggedIn', '1');
+      }
+    } else {
+      setLoginError('Invalid username or password.');
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (e) {
-      console.error(e);
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    if (window.localStorage) {
+      window.localStorage.removeItem('groceryLoggedIn');
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-gray-600 text-sm">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
+  if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-sm text-center">
-          <h1 className="text-2xl font-bold mb-2">Grocery App</h1>
-          <p className="text-sm text-gray-500 mb-6">Sign in to access your grocery lists.</p>
-          <button
-            onClick={handleLogin}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow"
-          >
-            Continue with Google
-          </button>
+        <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-sm">
+          <h1 className="text-2xl font-bold mb-2 text-center">Grocery App</h1>
+          <p className="text-sm text-gray-500 mb-4 text-center">Sign in with a simple username and password.</p>
+          {loginError && (
+            <p className="text-xs text-red-500 mb-2 text-center">
+              {loginError}
+            </p>
+          )}
+          <form onSubmit={handleLoginSubmit} className="space-y-3">
+            <input
+              type="text"
+              placeholder="Username"
+              value={loginForm.username}
+              onChange={e => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={loginForm.password}
+              onChange={e => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg shadow text-sm"
+            >
+              Login
+            </button>
+          </form>
+          <p className="mt-3 text-xs text-gray-400 text-center">
+            Demo login: <span className="font-mono">admin</span> / <span className="font-mono">grocery123</span>
+          </p>
         </div>
       </div>
     );
@@ -316,12 +318,6 @@ function GroceryApp() {
     <div className="max-w-3xl mx-auto p-4">
       <div className="flex items-center justify-between mb-4 gap-3">
         <h1 className="text-3xl font-bold text-center flex-1">Grocery List</h1>
-      </div>
-
-      <div className="flex items-center justify-between mb-4 text-sm">
-        <div className="text-gray-600 truncate">
-          Signed in as <span className="font-semibold">{user.displayName || user.email}</span>
-        </div>
         <button
           onClick={handleLogout}
           className="ml-3 bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-full text-xs"
