@@ -206,7 +206,9 @@ function GroceryApp() {
     setStoreData(newStores);
     setMasterStoreData(newMasterStores);
     setNewStoreName('');
+    setCurrentIndex(Object.keys(newStores).length - 1);
     saveToFirebase(newStores, null);
+    alert('Store added');
   };
 
   const addRecipeGroup = () => {
@@ -217,7 +219,9 @@ function GroceryApp() {
     setRecipeData(newRecipes);
     setMasterRecipeData(newMasterRecipes);
     setNewRecipeName('');
+    setCurrentIndex(Object.keys(newRecipes).length - 1);
     saveToFirebase(null, newRecipes);
+    alert('Recipe added');
   };
 
   const storeNames = Object.keys(storeData);
@@ -248,44 +252,48 @@ function GroceryApp() {
         </button>
       </div>
 
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white rounded-xl shadow p-3 flex flex-col gap-2">
-          <div className="text-sm font-semibold text-gray-700">Add New Store</div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Store name"
-              value={newStoreName}
-              onChange={e => setNewStoreName(e.target.value)}
-              className="flex-1 border rounded px-2 py-1 text-sm"
-            />
-            <button
-              onClick={addStore}
-              className="bg-green-600 text-white px-3 py-1 rounded text-sm"
-            >
-              Add
-            </button>
+      <div className="mb-4">
+        {viewMode === 'store' && (
+          <div className="bg-white rounded-xl shadow p-3 flex flex-col gap-2">
+            <div className="text-sm font-semibold text-gray-700">Add New Store</div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Store name"
+                value={newStoreName}
+                onChange={e => setNewStoreName(e.target.value)}
+                className="flex-1 border rounded px-2 py-1 text-sm"
+              />
+              <button
+                onClick={addStore}
+                className="bg-green-600 text-white px-3 py-1 rounded text-sm w-full sm:w-auto"
+              >
+                Add Store
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="bg-white rounded-xl shadow p-3 flex flex-col gap-2">
-          <div className="text-sm font-semibold text-gray-700">Add New Recipe</div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Recipe name"
-              value={newRecipeName}
-              onChange={e => setNewRecipeName(e.target.value)}
-              className="flex-1 border rounded px-2 py-1 text-sm"
-            />
-            <button
-              onClick={addRecipeGroup}
-              className="bg-green-600 text-white px-3 py-1 rounded text-sm"
-            >
-              Add
-            </button>
+        {viewMode === 'recipe' && (
+          <div className="bg-white rounded-xl shadow p-3 flex flex-col gap-2">
+            <div className="text-sm font-semibold text-gray-700">Add New Recipe</div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Recipe name"
+                value={newRecipeName}
+                onChange={e => setNewRecipeName(e.target.value)}
+                className="flex-1 border rounded px-2 py-1 text-sm"
+              />
+              <button
+                onClick={addRecipeGroup}
+                className="bg-green-600 text-white px-3 py-1 rounded text-sm w-full sm:w-auto"
+              >
+                Add Recipe
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <button onClick={resetList} className="mb-4 bg-blue-600 text-white px-4 py-2 rounded-xl shadow">RESET LIST</button>
