@@ -14,7 +14,7 @@
   .checked { text-decoration: line-through; opacity: 0.6; filter: blur(0.5px); transition: all 0.3s ease; }
   .slider-container { overflow: hidden; width: 100%; position: relative; }
   .slider-track { display: flex; transition: transform 0.4s ease; width: 100%; }
-  .store-card { min-width: 100vw; flex-shrink: 0; padding: 1rem; box-sizing: border-box; }
+  .store-card { min-width: 100%; max-width: 100%; box-sizing: border-box; padding: 1rem; display: flex; flex-direction: column; }
   .arrow-btn { position: absolute; top: 50%; transform: translateY(-50%); background: white; padding: 0.5rem 0.75rem; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,.2); font-size: 24px; cursor: pointer; z-index: 10; }
   .arrow-left { left: 0.5rem; }
   .arrow-right { right: 0.5rem; }
@@ -50,7 +50,6 @@ function GroceryApp() {
   const [currentStoreIndex, setCurrentStoreIndex] = React.useState(0);
   const storeNames = Object.keys(defaultData);
 
-  // Load Firebase data
   React.useEffect(() => {
     onValue(groceryRef, snapshot => {
       const val = snapshot.val() || {};
@@ -111,12 +110,12 @@ function GroceryApp() {
       <button onClick={resetList} className="mb-4 bg-blue-600 text-white px-4 py-2 rounded-xl shadow">RESET LIST</button>
 
       <div className="slider-container relative">
-        <div className="slider-track" style={{transform: `translateX(-${currentStoreIndex*100}vw)`}}>
+        <div className="slider-track" style={{transform: `translateX(-${currentStoreIndex*100}%)`}}>
           {storeNames.map(store => (
             <div key={store} className="store-card bg-white rounded-2xl shadow p-4">
               <h2 className="text-xl font-semibold mb-2">{store}</h2>
-              <div className="flex mt-2 gap-2">
-                <input type="text" placeholder="Add item(s), comma separated" value={newItemText[store]||''} onChange={e=>setNewItemText(prev=>({...prev,[store]:e.target.value}))} className="border rounded px-2 py-1 flex-1"/>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <input type="text" placeholder="Add item(s), comma separated" value={newItemText[store]||''} onChange={e=>setNewItemText(prev=>({...prev,[store]:e.target.value}))} className="flex-1 min-w-[150px] border rounded px-2 py-1"/>
                 <button onClick={()=>addItem(store,newItemText[store])} className="bg-green-600 text-white px-3 py-1 rounded">Add</button>
               </div>
               <ul className="mt-2 space-y-2">
@@ -126,7 +125,7 @@ function GroceryApp() {
                       <input type="checkbox" checked={item.checked} onChange={()=>handleCheck(store,item.name)} className="h-5 w-5"/>
                       <span className={`text-lg ${item.checked ? 'checked' : ''}`}>{item.name}</span>
                     </div>
-                    <button onClick={()=>deleteItem(item.name)} className="text-red-600 hover:text-red-800">
+                    <button onClick={()=>deleteItem(item.name)} className="text-red-600 hover:text-red-800 shrink-0">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clipRule="evenodd"/>
                       </svg>
@@ -145,7 +144,6 @@ function GroceryApp() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<GroceryApp />);
-
 </script>
 </body>
 </html>
