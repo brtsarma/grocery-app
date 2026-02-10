@@ -54,7 +54,6 @@ function GroceryApp() {
   React.useEffect(() => {
     onValue(groceryRef, snapshot => {
       const val = snapshot.val() || {};
-      // Convert simple array to {name, checked} objects if needed
       const loadedData = {};
       Object.keys(defaultData).forEach(store => {
         loadedData[store] = (val[store] || defaultData[store]).map(i => 
@@ -63,7 +62,7 @@ function GroceryApp() {
       });
       setData(loadedData);
       setMasterData(loadedData);
-      set(groceryRef, loadedData); // ensure Firebase has the structured data
+      set(groceryRef, loadedData);
     });
   }, []);
 
@@ -122,10 +121,12 @@ function GroceryApp() {
               </div>
               <ul className="mt-2 space-y-2">
                 {data[store]?.map(item => (
-                  <li key={item.name} className="flex items-center gap-2">
-                    <input type="checkbox" checked={item.checked} onChange={()=>handleCheck(store,item.name)} className="h-5 w-5"/>
-                    <span className={`text-lg ${item.checked ? 'checked' : ''}`}>{item.name}</span>
-                    <button onClick={()=>deleteItem(item.name)} className="ml-auto text-red-600 hover:text-red-800">
+                  <li key={item.name} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={item.checked} onChange={()=>handleCheck(store,item.name)} className="h-5 w-5"/>
+                      <span className={`text-lg ${item.checked ? 'checked' : ''}`}>{item.name}</span>
+                    </div>
+                    <button onClick={()=>deleteItem(item.name)} className="text-red-600 hover:text-red-800">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clipRule="evenodd"/>
                       </svg>
