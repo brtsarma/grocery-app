@@ -75,6 +75,8 @@ function GroceryApp() {
   const [newRecipeName, setNewRecipeName] = React.useState('');
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [viewMode, setViewMode] = React.useState('store'); // 'store' or 'recipe'
+  const [touchStartX, setTouchStartX] = React.useState(null);
+  const [touchEndX, setTouchEndX] = React.useState(null);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [loginForm, setLoginForm] = React.useState({ username: '', password: '' });
   const [loginError, setLoginError] = React.useState('');
@@ -254,6 +256,34 @@ function GroceryApp() {
 
   const activeData = viewMode === 'store' ? storeData : recipeData;
 
+  const handleTouchStart = (e) => {
+    if (e.touches && e.touches.length > 0) {
+      setTouchStartX(e.touches[0].clientX);
+      setTouchEndX(null);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches && e.touches.length > 0) {
+      setTouchEndX(e.touches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX === null || touchEndX === null) return;
+    const diff = touchStartX - touchEndX;
+    const threshold = 50; // pixels
+    if (diff > threshold) {
+      // swipe left -> next
+      nextGroup();
+    } else if (diff < -threshold) {
+      // swipe right -> previous
+      prevGroup();
+    }
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     const { username, password } = loginForm;
@@ -402,7 +432,12 @@ function GroceryApp() {
         RESET LIST
       </button>
 
-      <div className="slider-container relative">
+      <div
+        className="slider-container relative"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="slider-track" style={{transform: `translateX(-${currentIndex*100}%)`}}>
           {activeNames.map(name => (
             <div key={name} className="store-card bg-white/95 rounded-2xl shadow-md p-4">
