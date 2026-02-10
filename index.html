@@ -57,12 +57,10 @@ function GroceryApp() {
   const [masterStoreData, setMasterStoreData] = React.useState({});
   const [masterRecipeData, setMasterRecipeData] = React.useState({});
   const [newItemText, setNewItemText] = React.useState({});
+  const [newStoreName, setNewStoreName] = React.useState('');
+  const [newRecipeName, setNewRecipeName] = React.useState('');
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [viewMode, setViewMode] = React.useState('store'); // 'store' or 'recipe'
-
-  const storeNames = Object.keys(defaultStoreData);
-  const recipeNames = Object.keys(defaultRecipeData);
-  const activeNames = viewMode === 'store' ? storeNames : recipeNames;
 
   React.useEffect(() => {
     onValue(groceryRef, snapshot => {
@@ -71,8 +69,18 @@ function GroceryApp() {
       const rawStores = val.stores || val || {};
       const rawRecipes = val.recipes || {};
 
+      const allStoreNames = Array.from(new Set([
+        ...Object.keys(defaultStoreData),
+        ...Object.keys(rawStores)
+      ]));
+
+      const allRecipeNames = Array.from(new Set([
+        ...Object.keys(defaultRecipeData),
+        ...Object.keys(rawRecipes)
+      ]));
+
       const loadedStores = {};
-      storeNames.forEach(store => {
+      allStoreNames.forEach(store => {
         const sourceList = rawStores[store] || defaultStoreData[store] || [];
         loadedStores[store] = sourceList.map(i =>
           typeof i === 'string' ? { name: i, checked: false } : i
@@ -80,7 +88,7 @@ function GroceryApp() {
       });
 
       const loadedRecipes = {};
-      recipeNames.forEach(recipe => {
+      allRecipeNames.forEach(recipe => {
         const sourceList = rawRecipes[recipe] || defaultRecipeData[recipe] || [];
         loadedRecipes[recipe] = sourceList.map(i =>
           typeof i === 'string' ? { name: i, checked: false } : i
@@ -190,6 +198,32 @@ function GroceryApp() {
     saveToFirebase(resetStores, resetRecipes);
   };
 
+  const addStore = () => {
+    const name = newStoreName.trim();
+    if (!name || storeData[name]) return;
+    const newStores = { ...storeData, [name]: [] };
+    const newMasterStores = { ...masterStoreData, [name]: [] };
+    setStoreData(newStores);
+    setMasterStoreData(newMasterStores);
+    setNewStoreName('');
+    saveToFirebase(newStores, null);
+  };
+
+  const addRecipeGroup = () => {
+    const name = newRecipeName.trim();
+    if (!name || recipeData[name]) return;
+    const newRecipes = { ...recipeData, [name]: [] };
+    const newMasterRecipes = { ...masterRecipeData, [name]: [] };
+    setRecipeData(newRecipes);
+    setMasterRecipeData(newMasterRecipes);
+    setNewRecipeName('');
+    saveToFirebase(null, newRecipes);
+  };
+
+  const storeNames = Object.keys(storeData);
+  const recipeNames = Object.keys(recipeData);
+  const activeNames = viewMode === 'store' ? storeNames : recipeNames;
+
   const prevGroup = () => setCurrentIndex(i => Math.max(i - 1, 0));
   const nextGroup = () => setCurrentIndex(i => Math.min(i + 1, activeNames.length - 1));
 
@@ -212,6 +246,46 @@ function GroceryApp() {
         >
           Recipe-wise
         </button>
+      </div>
+
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-white rounded-xl shadow p-3 flex flex-col gap-2">
+          <div className="text-sm font-semibold text-gray-700">Add New Store</div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Store name"
+              value={newStoreName}
+              onChange={e => setNewStoreName(e.target.value)}
+              className="flex-1 border rounded px-2 py-1 text-sm"
+            />
+            <button
+              onClick={addStore}
+              className="bg-green-600 text-white px-3 py-1 rounded text-sm"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-3 flex flex-col gap-2">
+          <div className="text-sm font-semibold text-gray-700">Add New Recipe</div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Recipe name"
+              value={newRecipeName}
+              onChange={e => setNewRecipeName(e.target.value)}
+              className="flex-1 border rounded px-2 py-1 text-sm"
+            />
+            <button
+              onClick={addRecipeGroup}
+              className="bg-green-600 text-white px-3 py-1 rounded text-sm"
+            >
+              Add
+            </button>
+          </div>
+        </div>
       </div>
 
       <button onClick={resetList} className="mb-4 bg-blue-600 text-white px-4 py-2 rounded-xl shadow">RESET LIST</button>
