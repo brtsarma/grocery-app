@@ -1,223 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Grocery App PWA with Firebase</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#3b82f6">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <style>
-    .fade-collapse {
-      transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
-      overflow: hidden;
-    }
-    .collapsed {
-      opacity: 0;
-      max-height: 0;
-      margin: 0;
-      padding: 0;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Grocery List</title>
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <script type="module">
-    import { groceryRef, set, onValue } from './firebase.js';
-    window.firebaseRefs = { groceryRef, set, onValue };
-  </script>
+<style>
+/* Fade + slide animation */
+.fade-out { opacity:0; transform:translateX(-18px); transition:.35s; }
+
+/* Swipe delete */
+.swipe { transition:transform .28s; touch-action:pan-y; }
+.swiped { transform:translateX(-90px); }
+
+/* Dark mode */
+.dark body { background:#0d0d0d; color:#f1f1f1; }
+.dark .card { background:#1a1a1a!important; border-color:#333!important; }
+
+/* Floating reset button */
+#resetBtn {
+ position:fixed; bottom:28px; right:28px; background:#2563eb;
+ color:white; font-size:22px; padding:16px; border-radius:50%;
+ box-shadow:0 4px 14px rgba(0,0,0,.3); z-index:999;
+}
+</style>
 </head>
-<body class="bg-gray-100 p-4">
-  <div id="root"></div>
 
-  <script type="text/babel">
-    function GroceryApp() {
-      const { groceryRef, set, onValue } = window.firebaseRefs;
+<body class="bg-gray-100 dark:bg-black">
 
-      const defaultData = {
-        Winco: ["Seeds", "Nuts"],
-        Walmart: ["Strawberry", "Blueberry", "Cilantro", "Bell pepper", "Cucumber", "Organic spinach", "Iceberg cabbage", "Tomatoes", "Avocados", "Onion", "Potatoes", "Garlic", "Cherry tomatoes", "Banana", "Chicken Breast", "Organic mozzarella cheese sticks", "Baby Bel", "Tea milk", "Probiotic Yogurt", "Taco Fire Sauce", "Salad dressing"],
-        Sams: ["Protien bar", "Once upon a Farm Pouch", "Salmon", "Wipes", "Diaper", "Cottage cheese", "Lance Peanut biscuit", "Cauliflower", "Mushroom", "Capsicum", "Asparagus", "Iceberg cabbage", "Tea Milk", "Organic Milk", "Organic Egg"],
-        Costco: ["Fish", "Aussie Bites"],
-        IndiaBazar: ["Dhaniya", "Thorai Packet"]
-      };
+<!-- Header -->
+<header class="text-center py-5 text-2xl font-semibold bg-white dark:bg-neutral-900 shadow">
+  My Grocery List
+</header>
 
-      const [masterData, setMasterDataState] = React.useState(defaultData);
-      const [items, setItems] = React.useState(defaultData);
-      const [pendingRemove, setPendingRemove] = React.useState({});
-      const [undoQueue, setUndoQueue] = React.useState([]);
-      const [newItemText, setNewItemText] = React.useState({});
+<!-- Tabs -->
+<div class="overflow-x-auto whitespace-nowrap flex gap-3 px-4 py-3 bg-gray-50 dark:bg-neutral-800">
+  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('Walmart')">🛒 Walmart</button>
+  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('Costco')">🥥 Costco</button>
+  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('Sams')">🧺 Sams</button>
+  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('WinCo')">🌾 WinCo</button>
+  <button class="px-4 py-2 rounded-full bg-white dark:bg-neutral-700 shadow text-sm" onclick="scrollToCard('IndiaBazar')">🍅 India Bazar</button>
+</div>
 
-      React.useEffect(() => {
-        onValue(groceryRef, (snapshot) => {
-          const data = snapshot.val() || {};
-          const currentItems = data.items || {};
-          const currentMaster = data.masterData || {};
+<!-- Store Container -->
+<div id="storeContainer" class="p-4 flex flex-col gap-6"></div>
 
-          const mergedItems = { ...defaultData, ...currentItems };
-          const mergedMaster = { ...defaultData, ...currentMaster };
+<!-- Reset Button -->
+<button id="resetBtn" onclick="resetList()">⟳</button>
 
-          set(groceryRef, { items: mergedItems, masterData: mergedMaster })
-            .then(() => console.log('Firebase data synced with defaults'))
-            .catch(err => console.error('Firebase save error:', err));
+<script>
+/* ---------------------- DEFAULT DATA ---------------------- */
+let masterData = {
+  Walmart: ["Strawberry","Blueberry","Cilantro","Bell pepper","Cucumber","Organic spinach","Iceberg cabbage","Tomatoes","Avocadoes","Onion","Potatoes","Garlic","Cherry tomatoes","Banana","Chicken Breast","Organic mozzarella cheese sticks","Babybel","Tea milk","Probiotic yogurt","Taco Fire Sauce","Salad dressing"],
+  Costco: ["Salmon","Fish","Aussie bites","Organic milk","Organic eggs"],
+  Sams: ["Protein bar","Once upon a Farm pouch","Salmon","Wipes","Diaper","Cottage cheese","Lance peanut biscuit","Cauliflower","Mushroom","Capsicum","Asparagus","Iceberg cabbage","Tea milk","Organic milk","Organic egg"],
+  WinCo: ["Nuts","Seeds"],
+  IndiaBazar: ["Dhaniya","Thorai packet"]
+};
 
-          setItems(mergedItems);
-          setMasterDataState(mergedMaster);
-        });
-      }, []);
+let data = JSON.parse(localStorage.getItem("groceries")) || JSON.parse(JSON.stringify(masterData));
 
-      const saveToFirebase = (newItems, newMaster) => {
-        set(groceryRef, { items: newItems, masterData: newMaster })
-          .then(() => console.log('Saved to Firebase'))
-          .catch(err => console.error('Firebase save error:', err));
-      };
-
-      const handleCheck = (store, item) => {
-        if (!undoQueue.some(q => q.item === item)) {
-          setUndoQueue(prev => [...prev, { item }]);
-        }
-
-        const updatedPending = {};
-        Object.keys(items).forEach(s => {
-          if (items[s].includes(item)) {
-            updatedPending[s] = [...(pendingRemove[s] || []), item];
-          }
-        });
-        setPendingRemove(updatedPending);
-
-        setTimeout(() => {
-          const newItems = {};
-          Object.keys(items).forEach(s => {
-            newItems[s] = items[s].filter(i => i !== item);
-          });
-
-          const newPending = {};
-          Object.keys(updatedPending).forEach(s => {
-            newPending[s] = (updatedPending[s] || []).filter(i => i !== item);
-          });
-
-          setItems(newItems);
-          setPendingRemove(newPending);
-          setUndoQueue(prev => prev.filter(q => q.item !== item));
-          saveToFirebase(newItems, masterData);
-        }, 30000);
-      };
-
-      const undoCheck = (item) => {
-        const newItems = { ...items };
-        const newPending = { ...pendingRemove };
-
-        Object.keys(masterData).forEach(store => {
-          if (masterData[store].includes(item) && !newItems[store].includes(item)) {
-            newItems[store] = [...(newItems[store] || []), item];
-          }
-          if (newPending[store]) {
-            newPending[store] = newPending[store].filter(i => i !== item);
-          }
-        });
-
-        setItems(newItems);
-        setPendingRemove(newPending);
-        setUndoQueue(prev => prev.filter(q => q.item !== item));
-        saveToFirebase(newItems, masterData);
-      };
-
-      const undoAll = () => undoQueue.forEach(q => undoCheck(q.item));
-
-      const resetList = () => {
-        setItems(masterData);
-        setPendingRemove({});
-        setUndoQueue([]);
-        saveToFirebase(masterData, masterData);
-      };
-
-      const addItem = (store, text) => {
-        const newItemsArr = text.split(',').map(i => i.trim()).filter(Boolean);
-        if (newItemsArr.length === 0) return;
-        const newItems = { ...items, [store]: [...items[store], ...newItemsArr] };
-        const newMaster = { ...masterData, [store]: [...masterData[store], ...newItemsArr] };
-        setItems(newItems);
-        setMasterDataState(newMaster);
-        setNewItemText(prev => ({ ...prev, [store]: '' }));
-        saveToFirebase(newItems, newMaster);
-      };
-
-      const deleteItem = (item) => {
-        const newItems = {};
-        const newMaster = {};
-        Object.keys(items).forEach(store => {
-          newItems[store] = (items[store] || []).filter(i => i !== item);
-          newMaster[store] = (masterData[store] || []).filter(i => i !== item);
-        });
-
-        const newPending = {};
-        Object.keys(pendingRemove).forEach(store => {
-          newPending[store] = (pendingRemove[store] || []).filter(i => i !== item);
-        });
-
-        setItems(newItems);
-        setMasterDataState(newMaster);
-        setPendingRemove(newPending);
-        setUndoQueue(prev => prev.filter(q => q.item !== item));
-        saveToFirebase(newItems, newMaster);
-      };
-
-      return (
-        <div className="max-w-3xl mx-auto p-4">
-          <h1 className="text-3xl font-bold mb-4 text-center">Grocery List (Store Wise)</h1>
-
-          {undoQueue.length > 0 && (
-            <div className="mb-4 bg-yellow-100 p-3 rounded-lg flex justify-between items-center">
-              <span>Item{undoQueue.length > 1 ? 's' : ''} checked. Undo?</span>
-              <button onClick={undoAll} className="ml-4 text-blue-600 underline">Undo All</button>
+/* ---------------------- RENDER STORES ---------------------- */
+function renderStores() {
+  let html = "";
+  Object.keys(data).forEach(store => {
+    html += `
+    <div id="${store}" class="card bg-white dark:bg-neutral-900 rounded-2xl shadow p-4 border">
+      <h2 class="text-xl font-semibold mb-3">${store}</h2>
+      <ul class="space-y-2">
+        ${data[store].map(item => `
+          <li class="flex items-center justify-between swipe bg-gray-50 dark:bg-neutral-800 px-3 py-2 rounded-lg" 
+              ontouchstart="startSwipe(event,this)" ontouchmove="moveSwipe(event,this)" ontouchend="endSwipe(event,this,'${store}','${item}')">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onclick="checkItem('${item}')" />
+              <span>${item}</span>
             </div>
-          )}
+            <button onclick="deleteItem('${item}')" class="text-red-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+          </li>
+        `).join("")}
+      </ul>
+    </div>`;
+  });
 
-          <button onClick={resetList} className="mb-6 bg-blue-600 text-white px-4 py-2 rounded-xl shadow">RESET LIST</button>
+  document.getElementById("storeContainer").innerHTML = html;
+}
+renderStores();
 
-          <div className="grid grid-cols-1 gap-4">
-            {Object.keys(items).map(store => (
-              <div key={store} className="bg-white rounded-2xl shadow p-4">
-                <h2 className="text-xl font-semibold mb-2">{store}</h2>
-                <div className="flex mt-2 gap-2">
-                  <input type="text" placeholder="Add item(s), comma separated" value={newItemText[store] || ''} onChange={e => setNewItemText(prev => ({ ...prev, [store]: e.target.value }))} className="border rounded px-2 py-1 flex-1" />
-                  <button onClick={() => addItem(store, newItemText[store])} className="bg-green-600 text-white px-3 py-1 rounded">Add</button>
-                </div>
+/* ---------------------- CHECK & REMOVE ---------------------- */
+function checkItem(item) {
+  let elements = [...document.querySelectorAll("li")].filter(li => li.innerText.includes(item));
+  elements.forEach(el => el.classList.add("fade-out"));
 
-                {items[store].length === 0 && <p className="text-gray-500 mt-2">All checked!</p>}
+  setTimeout(() => {
+    Object.keys(data).forEach(store => {
+      data[store] = data[store].filter(i => i !== item);
+    });
+    save();
+    renderStores();
+  }, 350);
+}
 
-                <ul className="space-y-2 mt-2">
-                  {items[store].map(item => {
-                    const isPending = (pendingRemove[store] || []).includes(item);
-                    return (
-                      <li key={item} className={`flex items-center gap-3 fade-collapse ${isPending ? 'collapsed' : ''}`}>
-                        <input type="checkbox" onChange={() => handleCheck(store, item)} className="h-5 w-5" />
-                        <span className="text-lg">{item}</span>
+/* ---------------------- DELETE ---------------------- */
+function deleteItem(item) {
+  Object.keys(data).forEach(store => {
+    data[store] = data[store].filter(i => i !== item);
+  });
+  masterData[store] = masterData[store]?.filter(i => i !== item);
+  save();
+  renderStores();
+}
 
-                        {isPending && <button onClick={() => undoCheck(item)} className="ml-auto text-sm text-blue-600 underline">Undo</button>}
+/* ---------------------- RESET ---------------------- */
+function resetList() {
+  data = JSON.parse(JSON.stringify(masterData));
+  save();
+  renderStores();
+}
 
-                        {/* Trash icon delete button */}
-                        <button onClick={() => deleteItem(item)} className="ml-2 text-red-600 hover:text-red-800">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
+/* ---------------------- SAVE ---------------------- */
+function save() {
+  localStorage.setItem("groceries", JSON.stringify(data));
+}
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<GroceryApp />);
-  </script>
+/* ---------------------- SCROLL TO CARD ---------------------- */
+function scrollToCard(id) {
+  document.getElementById(id).scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+/* ---------------------- SWIPE DELETE ---------------------- */
+let startX = 0;
+
+function startSwipe(e, item) {
+  startX = e.touches[0].clientX;
+}
+
+function moveSwipe(e, item) {
+  let diff = e.touches[0].clientX - startX;
+  if (diff < -40) item.classList.add("swiped");
+}
+
+function endSwipe(e, item, store, itemName) {
+  if (item.classList.contains("swiped")) deleteItem(itemName);
+  else item.classList.remove("swiped");
+}
+</script>
+
 </body>
 </html>
