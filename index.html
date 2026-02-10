@@ -5,54 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Grocery List</title>
 <script src="https://cdn.tailwindcss.com"></script>
-
 <style>
-/* Fade + slide animation */
 .fade-out { opacity:0; transform:translateX(-18px); transition:.35s; }
-
-/* Swipe delete */
 .swipe { transition:transform .28s; touch-action:pan-y; }
 .swiped { transform:translateX(-90px); }
-
-/* Floating reset button */
 #resetBtn {
  position:fixed; bottom:28px; right:28px; background:#2563eb;
  color:white; font-size:22px; padding:16px; border-radius:50%;
  box-shadow:0 4px 14px rgba(0,0,0,.3); z-index:999;
 }
-
-/* Slider container */
-#sliderContainer {
-  display:flex;
-  overflow:hidden;
-  width:100%;
-  scroll-behavior:smooth;
-}
-
-/* Slider inner track */
-#sliderTrack {
-  display:flex;
-  transition:transform 0.4s ease;
-  width:100%;
-}
-
-/* Each store card */
-.storeCard {
-  min-width:100%;
-  flex-shrink:0;
-  margin-right:1rem;
-}
+#sliderContainer { overflow:hidden; width:100%; position:relative; }
+#sliderTrack { display:flex; transition:transform 0.4s ease; width:100%; }
+.storeCard { min-width:100vw; flex-shrink:0; padding:1rem; box-sizing:border-box; }
+.arrowBtn { position:absolute; top:50%; transform:translateY(-50%); background:white; padding:0.5rem 0.75rem; border-radius:50%; box-shadow:0 2px 8px rgba(0,0,0,.2); font-size:24px; cursor:pointer; z-index:10; }
+.arrowLeft { left:0.5rem; }
+.arrowRight { right:0.5rem; }
 </style>
 </head>
-
 <body class="bg-gray-100">
 
-<!-- Header -->
-<header class="text-center py-5 text-2xl font-semibold bg-white shadow">
-  My Grocery List
-</header>
+<header class="text-center py-5 text-2xl font-semibold bg-white shadow">My Grocery List</header>
 
-<!-- Tabs -->
 <div class="overflow-x-auto whitespace-nowrap flex gap-3 px-4 py-3 bg-gray-50">
   <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(0)">🛒 Walmart</button>
   <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(1)">🥥 Costco</button>
@@ -61,112 +34,69 @@
   <button class="px-4 py-2 rounded-full bg-white shadow text-sm" onclick="goToStore(4)">🍅 India Bazar</button>
 </div>
 
-<!-- Slider container -->
-<div id="sliderContainer" class="relative p-4">
+<div id="sliderContainer">
   <div id="sliderTrack"></div>
-  <!-- Arrows -->
-  <button id="prevBtn" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white px-3 py-2 rounded-full shadow" onclick="prevStore()">‹</button>
-  <button id="nextBtn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white px-3 py-2 rounded-full shadow" onclick="nextStore()">›</button>
+  <div class="arrowBtn arrowLeft" onclick="prevStore()">‹</div>
+  <div class="arrowBtn arrowRight" onclick="nextStore()">›</div>
 </div>
 
-<!-- Reset Button -->
 <button id="resetBtn" onclick="resetList()">⟳</button>
 
 <script>
-/* ---------------------- DEFAULT DATA ---------------------- */
 let masterData = {
-  Walmart: ["Strawberry","Blueberry","Cilantro","Bell pepper","Cucumber","Organic spinach","Iceberg cabbage","Tomatoes","Avocadoes","Onion","Potatoes","Garlic","Cherry tomatoes","Banana","Chicken Breast","Organic mozzarella cheese sticks","Babybel","Tea milk","Probiotic yogurt","Taco Fire Sauce","Salad dressing"],
-  Costco: ["Salmon","Fish","Aussie bites","Organic milk","Organic eggs"],
-  Sams: ["Protein bar","Once upon a Farm pouch","Salmon","Wipes","Diaper","Cottage cheese","Lance peanut biscuit","Cauliflower","Mushroom","Capsicum","Asparagus","Iceberg cabbage","Tea milk","Organic milk","Organic egg"],
-  WinCo: ["Nuts","Seeds"],
-  IndiaBazar: ["Dhaniya","Thorai packet"]
+  Walmart:["Strawberry","Blueberry","Cilantro","Bell pepper","Cucumber","Organic spinach","Iceberg cabbage","Tomatoes","Avocadoes","Onion","Potatoes","Garlic","Cherry tomatoes","Banana","Chicken Breast","Organic mozzarella cheese sticks","Babybel","Tea milk","Probiotic yogurt","Taco Fire Sauce","Salad dressing"],
+  Costco:["Salmon","Fish","Aussie bites","Organic milk","Organic eggs"],
+  Sams:["Protein bar","Once upon a Farm pouch","Salmon","Wipes","Diaper","Cottage cheese","Lance peanut biscuit","Cauliflower","Mushroom","Capsicum","Asparagus","Iceberg cabbage","Tea milk","Organic milk","Organic egg"],
+  WinCo:["Nuts","Seeds"],
+  IndiaBazar:["Dhaniya","Thorai packet"]
 };
+let data = JSON.parse(localStorage.getItem("groceries"))||JSON.parse(JSON.stringify(masterData));
+let storeNames = Object.keys(data);
+let currentStoreIndex=0;
 
-let data = JSON.parse(localStorage.getItem("groceries")) || JSON.parse(JSON.stringify(masterData));
-
-/* ---------------------- RENDER STORES ---------------------- */
-const storeNames = Object.keys(data);
-let currentStoreIndex = 0;
-
-function renderStores() {
-  const track = document.getElementById("sliderTrack");
-  track.innerHTML = "";
-  storeNames.forEach(store => {
-    let html = `<div class="storeCard card bg-white rounded-2xl shadow p-4 border">
+function renderStores(){
+  const track=document.getElementById("sliderTrack"); track.innerHTML="";
+  storeNames.forEach(store=>{
+    let html=`<div class="storeCard card bg-white rounded-2xl shadow border">
       <h2 class="text-xl font-semibold mb-3">${store}</h2>
       <ul class="space-y-2">
-        ${data[store].map(item => `
-          <li class="flex items-center justify-between swipe bg-gray-50 px-3 py-2 rounded-lg" 
-              ontouchstart="startSwipe(event,this)" ontouchmove="moveSwipe(event,this)" ontouchend="endSwipe(event,this,'${store}','${item}')">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" onclick="checkItem('${item}')" />
-              <span>${item}</span>
-            </div>
-            <button onclick="deleteItem('${item}')" class="text-red-600">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/>
-              </svg>
-            </button>
-          </li>`).join("")}
+      ${data[store].map(item=>`<li class="flex items-center justify-between swipe bg-gray-50 px-3 py-2 rounded-lg" 
+        ontouchstart="startSwipe(event,this)" ontouchmove="moveSwipe(event,this)" ontouchend="endSwipe(event,this,'${store}','${item}')">
+        <div class="flex items-center gap-2"><input type="checkbox" onclick="checkItem('${item}')"/><span>${item}</span></div>
+        <button onclick="deleteItem('${item}')" class="text-red-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clip-rule="evenodd"/>
+        </svg></button></li>`).join("")}
       </ul>
     </div>`;
-    track.innerHTML += html;
+    track.innerHTML+=html;
   });
   updateSlider();
 }
 renderStores();
 
-/* ---------------------- SLIDER CONTROL ---------------------- */
-function updateSlider() {
-  const track = document.getElementById("sliderTrack");
-  track.style.transform = `translateX(-${currentStoreIndex*100}%)`;
+function updateSlider(){
+  const track=document.getElementById("sliderTrack");
+  track.style.transform=`translateX(-${currentStoreIndex*100}vw)`;
 }
-function prevStore() {
-  if(currentStoreIndex>0) currentStoreIndex--;
-  updateSlider();
-}
-function nextStore() {
-  if(currentStoreIndex<storeNames.length-1) currentStoreIndex++;
-  updateSlider();
-}
-function goToStore(index) {
-  currentStoreIndex = index;
-  updateSlider();
+function prevStore(){ if(currentStoreIndex>0) currentStoreIndex--; updateSlider(); }
+function nextStore(){ if(currentStoreIndex<storeNames.length-1) currentStoreIndex++; updateSlider(); }
+function goToStore(index){ currentStoreIndex=index; updateSlider(); }
+
+function checkItem(item){
+  let elements=[...document.querySelectorAll("li")].filter(li=>li.innerText.includes(item));
+  elements.forEach(el=>el.classList.add("fade-out"));
+  setTimeout(()=>{ Object.keys(data).forEach(store=>data[store]=data[store].filter(i=>i!==item)); save(); renderStores(); },350);
 }
 
-/* ---------------------- CHECK & REMOVE ---------------------- */
-function checkItem(item) {
-  let elements = [...document.querySelectorAll("li")].filter(li => li.innerText.includes(item));
-  elements.forEach(el => el.classList.add("fade-out"));
-  setTimeout(() => {
-    Object.keys(data).forEach(store => data[store] = data[store].filter(i=>i!==item));
-    save(); renderStores();
-  }, 350);
-}
+function deleteItem(item){ Object.keys(data).forEach(store=>data[store]=data[store].filter(i=>i!==item)); save(); renderStores(); }
+function resetList(){ data=JSON.parse(JSON.stringify(masterData)); save(); renderStores(); }
+function save(){ localStorage.setItem("groceries",JSON.stringify(data)); }
 
-/* ---------------------- DELETE ---------------------- */
-function deleteItem(item) {
-  Object.keys(data).forEach(store => data[store] = data[store].filter(i=>i!==item));
-  save(); renderStores();
-}
-
-/* ---------------------- RESET ---------------------- */
-function resetList() {
-  data = JSON.parse(JSON.stringify(masterData));
-  save(); renderStores();
-}
-
-/* ---------------------- SAVE ---------------------- */
-function save() {
-  localStorage.setItem("groceries", JSON.stringify(data));
-}
-
-/* ---------------------- SWIPE DELETE ---------------------- */
 let startX=0;
 function startSwipe(e,item){startX=e.touches[0].clientX;}
 function moveSwipe(e,item){let diff=e.touches[0].clientX-startX;if(diff<-40)item.classList.add("swiped");}
 function endSwipe(e,item,store,itemName){if(item.classList.contains("swiped")) deleteItem(itemName); else item.classList.remove("swiped");}
 </script>
-
 </body>
 </html>
