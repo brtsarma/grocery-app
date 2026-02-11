@@ -1,55 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grocery App PWA with Firebase</title>
+
+<!-- Tailwind + Flowbite -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
 <link rel="stylesheet" href="https://unpkg.com/flowbite@2.5.1/dist/flowbite.min.css">
+
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#3b82f6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- FULL GLASS UI THEME -->
 <style>
-  .checked { text-decoration: line-through; opacity: 0.6; filter: blur(0.5px); transition: all 0.3s ease; }
-  .slider-container { overflow: hidden; width: 100%; position: relative; }
-  .slider-track { display: flex; transition: transform 0.4s ease; width: 100%; }
-  .store-card { min-width: 100%; max-width: 100%; box-sizing: border-box; padding: 1rem; display: flex; flex-direction: column; }
-  .arrow-btn { position: absolute; top: 0.5rem; background: white; padding: 0.5rem 0.75rem; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,.2); font-size: 20px; cursor: pointer; z-index: 10; transition: all 0.2s ease; }
-  .arrow-btn:hover { background: #f3f4f6; transform: scale(1.1); }
-  .arrow-left { left: 0.5rem; }
-  .arrow-right { right: 0.5rem; }
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.22);
+  --glass-bg-strong: rgba(255, 255, 255, 0.32);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 8px 28px rgba(0,0,0,0.22);
+  --glass-radius: 1.25rem;
+}
+
+body {
+  background: linear-gradient(135deg, #dbeafe, #e0e7ff, #f5f3ff);
+  min-height: 100vh;
+  backdrop-filter: blur(20px);
+}
+
+.checked {
+  text-decoration: line-through;
+  opacity: 0.5;
+  filter: blur(0.6px);
+  transition: all 0.25s ease;
+}
+
+/* Store/Recipe Glass Cards */
+.store-card {
+  min-width: 100%;
+  padding: 1.25rem;
+  border-radius: var(--glass-radius);
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: transform 0.35s ease;
+}
+.store-card:hover {
+  transform: translateY(-3px);
+}
+
+/* Slider */
+.slider-container {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  background: var(--glass-bg-strong);
+  border-radius: var(--glass-radius);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(25px);
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.25);
+}
+
+.slider-track {
+  display: flex;
+  transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
+}
+
+/* Input Fields */
+input[type="text"], input[type="password"] {
+  background: rgba(255,255,255,0.25);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+/* Buttons */
+button {
+  background: rgba(255,255,255,0.25);
+  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
+  padding: 0.55rem 1.2rem;
+  backdrop-filter: blur(14px);
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  font-weight: 600;
+}
+button:hover {
+  background: rgba(255,255,255,0.35);
+  transform: translateY(-2px);
+}
+
+/* Header Glass Style */
+h1 {
+  background: rgba(255,255,255,0.28);
+  padding: 0.6rem 1.2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(15px);
+}
+
+/* Login Box Override */
+.bg-white\/90 {
+  background: rgba(255,255,255,0.28) !important;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  border-radius: 1.25rem;
+  box-shadow: var(--glass-shadow);
+}
 </style>
+
+<!-- Firebase Imports -->
 <script type="module">
-  import {
-    groceryRef,
-    set,
-    onValue,
-  } from './firebase.js';
-  window.firebaseRefs = {
-    groceryRef,
-    set,
-    onValue,
-  };
+  import { groceryRef, set, onValue } from "./firebase.js";
+  window.firebaseRefs = { groceryRef, set, onValue };
 </script>
+
+<!-- React -->
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+<body>
 
 <div id="root"></div>
 
 <script type="text/babel">
 
+/***********************
+ * MAIN GROCERY APP
+ ***********************/
 function GroceryApp() {
-  const {
-    groceryRef,
-    set,
-    onValue,
-  } = window.firebaseRefs;
+  const { groceryRef, set, onValue } = window.firebaseRefs;
 
+  /* Default Stores */
   const defaultStoreData = {
     Winco: ["Seeds","Nuts"],
     Walmart: ["Strawberry","Blueberry","Cilantro","Bell pepper","Cucumber","Organic spinach","Iceberg cabbage","Tomatoes","Avocados","Onion","Potatoes","Garlic","Cherry tomatoes","Banana","Chicken Breast","Organic mozzarella cheese sticks","Baby Bel","Tea milk","Probiotic Yogurt","Taco Fire Sauce","Salad dressing"],
@@ -58,68 +149,62 @@ function GroceryApp() {
     IndiaBazar: ["Dhaniya","Thorai Packet"]
   };
 
+  /* Recipes */
   const defaultRecipeData = {
-    "Smoothie": ["Banana","Strawberry","Blueberry","Probiotic Yogurt"],
+    Smoothie: ["Banana","Strawberry","Blueberry","Probiotic Yogurt"],
     "Green Salad": ["Organic spinach","Iceberg cabbage","Cucumber","Tomatoes","Cherry tomatoes","Bell pepper","Avocados","Onion","Salad dressing"],
-    "Tacos": ["Chicken Breast","Taco Fire Sauce","Cilantro","Onion"],
+    Tacos: ["Chicken Breast","Taco Fire Sauce","Cilantro","Onion"],
     "Kids Snacks": ["Seeds","Nuts","Organic mozzarella cheese sticks","Baby Bel","Once upon a Farm Pouch","Protein bar","Lance Peanut biscuit"],
     "Indian Curry": ["Dhaniya","Tomatoes","Onion","Garlic","Potatoes"]
   };
 
+  /* React State */
   const [storeData, setStoreData] = React.useState({});
   const [recipeData, setRecipeData] = React.useState({});
   const [masterStoreData, setMasterStoreData] = React.useState({});
   const [masterRecipeData, setMasterRecipeData] = React.useState({});
   const [newItemText, setNewItemText] = React.useState({});
-  const [newStoreName, setNewStoreName] = React.useState('');
-  const [newRecipeName, setNewRecipeName] = React.useState('');
+  const [newStoreName, setNewStoreName] = React.useState("");
+  const [newRecipeName, setNewRecipeName] = React.useState("");
   const [currentIndex, setCurrentIndex] = React.useState(0);
-  const [viewMode, setViewMode] = React.useState('store'); // 'store' or 'recipe'
+  const [viewMode, setViewMode] = React.useState("store");
   const [touchStartX, setTouchStartX] = React.useState(null);
   const [touchEndX, setTouchEndX] = React.useState(null);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-  const [loginForm, setLoginForm] = React.useState({ username: '', password: '' });
-  const [loginError, setLoginError] = React.useState('');
+  const [loginForm, setLoginForm] = React.useState({ username: "", password: "" });
+  const [loginError, setLoginError] = React.useState("");
 
+  /**********************
+   * Firebase Sync
+   **********************/
   React.useEffect(() => {
-    if (window.localStorage && window.localStorage.getItem('groceryLoggedIn') === '1') {
+    if (localStorage.getItem("groceryLoggedIn") === "1") {
       setIsLoggedIn(true);
     }
 
     onValue(groceryRef, snapshot => {
       const val = snapshot.val() || {};
-
-      const rawStores = val.stores || val || {};
+      const rawStores = val.stores || {};
       const rawRecipes = val.recipes || {};
 
-      const allStoreNames = Array.from(new Set([
-        ...Object.keys(defaultStoreData),
-        ...Object.keys(rawStores)
-      ]));
-
-      const allRecipeNames = Array.from(new Set([
-        ...Object.keys(defaultRecipeData),
-        ...Object.keys(rawRecipes)
-      ]));
+      const allStoreNames = [...new Set([...Object.keys(defaultStoreData), ...Object.keys(rawStores)])];
+      const allRecipeNames = [...new Set([...Object.keys(defaultRecipeData), ...Object.keys(rawRecipes)])];
 
       const loadedStores = {};
       allStoreNames.forEach(store => {
-        const sourceList = rawStores[store] || defaultStoreData[store] || [];
-        loadedStores[store] = sourceList.map(i =>
-          typeof i === 'string' ? { name: i, checked: false } : i
-        );
+        const source = rawStores[store] || defaultStoreData[store] || [];
+        loadedStores[store] = source.map(x => (typeof x === "string" ? { name: x, checked: false } : x));
       });
 
       const loadedRecipes = {};
       allRecipeNames.forEach(recipe => {
-        const sourceList = rawRecipes[recipe] || defaultRecipeData[recipe] || [];
-        loadedRecipes[recipe] = sourceList.map(i =>
-          typeof i === 'string' ? { name: i, checked: false } : i
-        );
+        const source = rawRecipes[recipe] || defaultRecipeData[recipe] || [];
+        loadedRecipes[recipe] = source.map(x => (typeof x === "string" ? { name: x, checked: false } : x));
       });
 
       setStoreData(loadedStores);
       setMasterStoreData(loadedStores);
+
       setRecipeData(loadedRecipes);
       setMasterRecipeData(loadedRecipes);
 
@@ -127,369 +212,307 @@ function GroceryApp() {
     });
   }, []);
 
-  const saveToFirebase = (nextStores, nextRecipes) => {
-    const payload = {
-      stores: nextStores || storeData,
-      recipes: nextRecipes || recipeData
-    };
-    set(groceryRef, payload);
+  /**********************
+   * Save to Firebase
+   **********************/
+  const saveToFirebase = (stores, recipes) => {
+    set(groceryRef, {
+      stores: stores || storeData,
+      recipes: recipes || recipeData
+    });
   };
 
-  const handleCheck = (itemName) => {
-    const newStores = { ...storeData };
-    const newRecipes = { ...recipeData };
+  /**********************
+   * Check Item
+   **********************/
+  const handleCheck = (name) => {
+    const newStores = JSON.parse(JSON.stringify(storeData));
+    const newRecipes = JSON.parse(JSON.stringify(recipeData));
 
-    let isCheckedSomewhere = false;
+    let checked = false;
 
-    [newStores, newRecipes].forEach(groupData => {
-      Object.keys(groupData).forEach(groupName => {
-        if (groupData[groupName]?.some(item => item.name === itemName && item.checked)) {
-          isCheckedSomewhere = true;
-        }
-      });
-    });
+    Object.values(newStores).forEach(list => list.forEach(i => { if (i.name === name && i.checked) checked = true; }));
+    Object.values(newRecipes).forEach(list => list.forEach(i => { if (i.name === name && i.checked) checked = true; }));
 
-    const newChecked = !isCheckedSomewhere;
+    const newVal = !checked;
 
-    [newStores, newRecipes].forEach(groupData => {
-      Object.keys(groupData).forEach(groupName => {
-        groupData[groupName] = groupData[groupName].map(item =>
-          item.name === itemName ? { ...item, checked: newChecked } : item
-        );
-      });
-    });
+    Object.keys(newStores).forEach(s => newStores[s] = newStores[s].map(it => it.name === name ? { ...it, checked: newVal } : it));
+    Object.keys(newRecipes).forEach(r => newRecipes[r] = newRecipes[r].map(it => it.name === name ? { ...it, checked: newVal } : it));
 
     setStoreData(newStores);
     setRecipeData(newRecipes);
     saveToFirebase(newStores, newRecipes);
   };
 
-  const addItem = (groupName, text) => {
+  /**********************
+   * Add Item
+   **********************/
+  const addItem = (group, text) => {
     if (!text) return;
-    const newItems = text
-      .split(',')
-      .map(i => i.trim())
-      .filter(Boolean)
-      .map(i => ({ name: i, checked: false }));
 
-    if (viewMode === 'store') {
-      const newStores = { ...storeData, [groupName]: [...(storeData[groupName] || []), ...newItems] };
-      const newMasterStores = { ...masterStoreData, [groupName]: [...(masterStoreData[groupName] || []), ...newItems] };
-      setStoreData(newStores);
-      setMasterStoreData(newMasterStores);
-      setNewItemText(prev => ({ ...prev, [groupName]: '' }));
-      saveToFirebase(newStores, null);
+    const newItems = text.split(",").map(i => i.trim()).filter(x => x).map(x => ({ name: x, checked: false }));
+
+    if (viewMode === "store") {
+      const updatedStores = { ...storeData, [group]: [...storeData[group], ...newItems] };
+      setStoreData(updatedStores);
+      setMasterStoreData({ ...masterStoreData, [group]: [...masterStoreData[group], ...newItems] });
+      saveToFirebase(updatedStores, null);
     } else {
-      const newRecipes = { ...recipeData, [groupName]: [...(recipeData[groupName] || []), ...newItems] };
-      const newMasterRecipes = { ...masterRecipeData, [groupName]: [...(masterRecipeData[groupName] || []), ...newItems] };
-      setRecipeData(newRecipes);
-      setMasterRecipeData(newMasterRecipes);
-      setNewItemText(prev => ({ ...prev, [groupName]: '' }));
-      saveToFirebase(null, newRecipes);
+      const updatedRecipes = { ...recipeData, [group]: [...recipeData[group], ...newItems] };
+      setRecipeData(updatedRecipes);
+      setMasterRecipeData({ ...masterRecipeData, [group]: [...masterRecipeData[group], ...newItems] });
+      saveToFirebase(null, updatedRecipes);
     }
+
+    setNewItemText(prev => ({ ...prev, [group]: "" }));
   };
 
-  const deleteItem = (itemName) => {
-    const newStores = {};
-    Object.keys(storeData).forEach(store => {
-      newStores[store] = storeData[store].filter(item => item.name !== itemName);
+  /**********************
+   * Delete Item
+   **********************/
+  const deleteItem = (name) => {
+    const updatedStores = {};
+    const updatedRecipes = {};
+
+    Object.keys(storeData).forEach(s => {
+      updatedStores[s] = storeData[s].filter(i => i.name !== name);
     });
+    Object.keys(recipeData).forEach(r => {
+      updatedRecipes[r] = recipeData[r].filter(i => i.name !== name);
+    });
+
+    setStoreData(updatedStores);
+    setRecipeData(updatedRecipes);
+    saveToFirebase(updatedStores, updatedRecipes);
+  };
+
+  /**********************
+   * Reset List
+   **********************/
+  const resetList = () => {
+    const newStores = {};
+    Object.keys(masterStoreData).forEach(s => newStores[s] = masterStoreData[s].map(i => ({ ...i, checked: false })));
 
     const newRecipes = {};
-    Object.keys(recipeData).forEach(recipe => {
-      newRecipes[recipe] = recipeData[recipe].filter(item => item.name !== itemName);
-    });
+    Object.keys(masterRecipeData).forEach(r => newRecipes[r] = masterRecipeData[r].map(i => ({ ...i, checked: false })));
 
     setStoreData(newStores);
     setRecipeData(newRecipes);
     saveToFirebase(newStores, newRecipes);
   };
 
-  const resetList = () => {
-    const resetStores = {};
-    Object.keys(masterStoreData).forEach(store => {
-      resetStores[store] = masterStoreData[store].map(item => ({ ...item, checked: false }));
-    });
-
-    const resetRecipes = {};
-    Object.keys(masterRecipeData).forEach(recipe => {
-      resetRecipes[recipe] = masterRecipeData[recipe].map(item => ({ ...item, checked: false }));
-    });
-
-    setStoreData(resetStores);
-    setRecipeData(resetRecipes);
-    saveToFirebase(resetStores, resetRecipes);
-  };
-
+  /**********************
+   * Add Store / Recipe
+   **********************/
   const addStore = () => {
-    const name = newStoreName.trim();
-    if (!name || storeData[name]) return;
-    const newStores = { ...storeData, [name]: [] };
-    const newMasterStores = { ...masterStoreData, [name]: [] };
-    setStoreData(newStores);
-    setMasterStoreData(newMasterStores);
-    setNewStoreName('');
-    setCurrentIndex(Object.keys(newStores).length - 1);
-    saveToFirebase(newStores, null);
-    alert('Store added');
+    if (!newStoreName.trim()) return;
+    if (storeData[newStoreName]) return;
+
+    const updatedStores = { ...storeData, [newStoreName]: [] };
+    setStoreData(updatedStores);
+    setMasterStoreData({ ...masterStoreData, [newStoreName]: [] });
+    setNewStoreName("");
+    setCurrentIndex(Object.keys(updatedStores).length - 1);
+    saveToFirebase(updatedStores, null);
   };
 
   const addRecipeGroup = () => {
-    const name = newRecipeName.trim();
-    if (!name || recipeData[name]) return;
-    const newRecipes = { ...recipeData, [name]: [] };
-    const newMasterRecipes = { ...masterRecipeData, [name]: [] };
-    setRecipeData(newRecipes);
-    setMasterRecipeData(newMasterRecipes);
-    setNewRecipeName('');
-    setCurrentIndex(Object.keys(newRecipes).length - 1);
-    saveToFirebase(null, newRecipes);
-    alert('Recipe added');
+    if (!newRecipeName.trim()) return;
+    if (recipeData[newRecipeName]) return;
+
+    const updatedRecipes = { ...recipeData, [newRecipeName]: [] };
+    setRecipeData(updatedRecipes);
+    setMasterRecipeData({ ...masterRecipeData, [newRecipeName]: [] });
+    setNewRecipeName("");
+    setCurrentIndex(Object.keys(updatedRecipes).length - 1);
+    saveToFirebase(null, updatedRecipes);
   };
 
-  const storeNames = Object.keys(storeData);
-  const recipeNames = Object.keys(recipeData);
-  const activeNames = viewMode === 'store' ? storeNames : recipeNames;
+  /**********************
+   * Swipe Logic (Loop)
+   **********************/
+  const activeList = viewMode === "store" ? storeData : recipeData;
+  const names = Object.keys(activeList);
 
-  const prevGroup = () => setCurrentIndex(i => Math.max(i - 1, 0));
-  const nextGroup = () => setCurrentIndex(i => Math.min(i + 1, activeNames.length - 1));
+  const nextGroup = () =>
+    setCurrentIndex(i => (i + 1) % names.length);
 
-  const activeData = viewMode === 'store' ? storeData : recipeData;
+  const prevGroup = () =>
+    setCurrentIndex(i => (i - 1 + names.length) % names.length);
 
   const handleTouchStart = (e) => {
-    if (e.touches && e.touches.length > 0) {
-      setTouchStartX(e.touches[0].clientX);
-      setTouchEndX(null);
-    }
+    setTouchStartX(e.touches[0].clientX);
+    setTouchEndX(null);
   };
 
   const handleTouchMove = (e) => {
-    if (e.touches && e.touches.length > 0) {
-      setTouchEndX(e.touches[0].clientX);
-    }
+    setTouchEndX(e.touches[0].clientX);
   };
 
   const handleTouchEnd = () => {
-    if (touchStartX === null || touchEndX === null) return;
+    if (touchStartX == null || touchEndX == null) return;
+
     const diff = touchStartX - touchEndX;
-    const threshold = 50; // pixels
-    if (diff > threshold) {
-      // swipe left -> next
-      nextGroup();
-    } else if (diff < -threshold) {
-      // swipe right -> previous
-      prevGroup();
-    }
+
+    if (diff > 50) nextGroup();
+    if (diff < -50) prevGroup();
+
     setTouchStartX(null);
     setTouchEndX(null);
   };
 
-  const handleLoginSubmit = (e) => {
+  /**********************
+   * Login Logic
+   **********************/
+  const loginSubmit = (e) => {
     e.preventDefault();
-    const { username, password } = loginForm;
-    if (username === 'admin' && password === 'grocery123') {
+    if (loginForm.username === "admin" && loginForm.password === "grocery123") {
       setIsLoggedIn(true);
-      setLoginError('');
-      if (window.localStorage) {
-        window.localStorage.setItem('groceryLoggedIn', '1');
-      }
+      localStorage.setItem("groceryLoggedIn", "1");
     } else {
-      setLoginError('Invalid username or password.');
+      setLoginError("Invalid username or password.");
     }
   };
 
-  const handleLogout = () => {
+  const logout = () => {
     setIsLoggedIn(false);
-    if (window.localStorage) {
-      window.localStorage.removeItem('groceryLoggedIn');
-    }
+    localStorage.removeItem("groceryLoggedIn");
   };
 
+  /**********************
+   * LOGIN PAGE
+   **********************/
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl p-6 w-full max-w-sm">
-          <h1 className="text-2xl font-bold mb-2 text-center">Grocery App</h1>
-          <p className="text-sm text-gray-500 mb-4 text-center">Sign in with a simple username and password.</p>
-          {loginError && (
-            <p className="text-xs text-red-500 mb-2 text-center">
-              {loginError}
-            </p>
-          )}
-          <form onSubmit={handleLoginSubmit} className="space-y-3">
+        <div className="bg-white/90 shadow-xl p-6 max-w-sm w-full">
+          <h1 className="text-2xl font-bold text-center mb-3">Grocery App</h1>
+
+          {loginError && <p className="text-red-500 text-xs text-center mb-2">{loginError}</p>}
+
+          <form onSubmit={loginSubmit} className="space-y-3">
             <input
               type="text"
               placeholder="Username"
               value={loginForm.username}
-              onChange={e => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
-              className="w-full border rounded px-3 py-2 text-sm"
+              onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
+              className="w-full"
             />
+
             <input
               type="password"
               placeholder="Password"
               value={loginForm.password}
-              onChange={e => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
-              className="w-full border rounded px-3 py-2 text-sm"
+              onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+              className="w-full"
             />
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-full shadow text-sm transition"
-            >
-              Login
-            </button>
+
+            <button className="w-full">Login</button>
           </form>
-          <p className="mt-3 text-xs text-gray-400 text-center">
-            
-          </p>
         </div>
       </div>
     );
   }
 
+  /**********************
+   * MAIN UI
+   **********************/
   return (
-    <div className="max-w-md sm:max-w-3xl mx-auto p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-4 gap-3">
-        <h1 className="text-3xl font-bold text-center flex-1 text-gray-900">Grocery List</h1>
-        <button
-          onClick={handleLogout}
-          className="ml-3 bg-white/80 hover:bg-white text-gray-800 px-4 py-1.5 rounded-full text-xs font-medium shadow transition"
-        >
-          Logout
-        </button>
+    <div className="max-w-xl mx-auto p-4">
+
+      {/* Header */}
+      <div className="flex justify-between items-center mb-5">
+        <h1 className="text-3xl font-bold">Grocery List</h1>
+        <button onClick={logout}>Logout</button>
       </div>
 
-      <div className="flex justify-center mb-4 space-x-2">
-        <button
-          onClick={() => { setViewMode('store'); setCurrentIndex(0); }}
-          className={`px-4 py-2 rounded-full text-sm font-semibold shadow ${
-            viewMode === 'store'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white/90 text-gray-700'
-          }`}
-        >
+      {/* Toggle Buttons */}
+      <div className="flex gap-2 mb-4 justify-center">
+        <button onClick={() => { setViewMode("store"); setCurrentIndex(0); }}>
           Store-wise
         </button>
-        <button
-          onClick={() => { setViewMode('recipe'); setCurrentIndex(0); }}
-          className={`px-4 py-2 rounded-full text-sm font-semibold shadow ${
-            viewMode === 'recipe'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white/90 text-gray-700'
-          }`}
-        >
+        <button onClick={() => { setViewMode("recipe"); setCurrentIndex(0); }}>
           Recipe-wise
         </button>
       </div>
 
+      {/* Add Store / Recipe */}
       <div className="mb-4">
-        {viewMode === 'store' && (
-          <div className="bg-white/90 rounded-xl shadow-md p-3 flex flex-col gap-2">
-            <div className="text-sm font-semibold text-gray-700">Add New Store</div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                placeholder="Store name"
-                value={newStoreName}
-                onChange={e => setNewStoreName(e.target.value)}
-                className="flex-1 border rounded px-2 py-1 text-sm"
-              />
-              <button
-                onClick={addStore}
-                className="bg-green-600 text-white px-3 py-1 rounded text-sm w-full sm:w-auto"
-              >
-                Add Store
-              </button>
+        {viewMode === "store" ? (
+          <div className="bg-white/90 p-3 rounded-xl">
+            <div>Add New Store</div>
+            <div className="flex gap-2 mt-2">
+              <input value={newStoreName} onChange={e => setNewStoreName(e.target.value)} placeholder="Store name" className="flex-1" />
+              <button onClick={addStore}>Add</button>
             </div>
           </div>
-        )}
-
-        {viewMode === 'recipe' && (
-          <div className="bg-white/90 rounded-xl shadow-md p-3 flex flex-col gap-2">
-            <div className="text-sm font-semibold text-gray-700">Add New Recipe</div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                placeholder="Recipe name"
-                value={newRecipeName}
-                onChange={e => setNewRecipeName(e.target.value)}
-                className="flex-1 border rounded px-2 py-1 text-sm"
-              />
-              <button
-                onClick={addRecipeGroup}
-                className="bg-green-600 text-white px-3 py-1 rounded text-sm w-full sm:w-auto"
-              >
-                Add Recipe
-              </button>
+        ) : (
+          <div className="bg-white/90 p-3 rounded-xl">
+            <div>Add New Recipe</div>
+            <div className="flex gap-2 mt-2">
+              <input value={newRecipeName} onChange={e => setNewRecipeName(e.target.value)} placeholder="Recipe name" className="flex-1" />
+              <button onClick={addRecipeGroup}>Add</button>
             </div>
           </div>
         )}
       </div>
 
-      <button
-        onClick={resetList}
-        className="mb-4 w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full shadow font-semibold text-sm transition"
-      >
-        RESET LIST
+      {/* RESET BUTTON */}
+      <button className="w-full mb-4" onClick={resetList}>
+        Reset List
       </button>
 
+      {/* SLIDER */}
       <div
-        className="slider-container relative"
+        className="slider-container"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="slider-track" style={{transform: `translateX(-${currentIndex*100}%)`}}>
-          {activeNames.map(name => (
-            <div key={name} className="store-card bg-white/95 rounded-2xl shadow-md p-4">
-              <h2 className="text-xl font-semibold mb-2 text-gray-900">
-                {viewMode === 'store' ? `Store: ${name}` : `Recipe: ${name}`}
-              </h2>
-              <div className="flex flex-wrap gap-2 mt-2">
+        <div
+          className="slider-track"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {names.map(name => (
+            <div key={name} className="store-card">
+              <h2 className="text-xl font-semibold mb-2">{name}</h2>
+
+              {/* Add items */}
+              <div className="flex gap-2 mb-2 flex-wrap">
                 <input
                   type="text"
-                  placeholder="Add item(s), comma separated"
-                  value={newItemText[name]||''}
-                  onChange={e=>setNewItemText(prev=>({...prev,[name]:e.target.value}))}
-                  className="flex-1 min-w-[150px] border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Add items"
+                  value={newItemText[name] || ""}
+                  onChange={e => setNewItemText(prev => ({ ...prev, [name]: e.target.value }))}
+                  className="flex-1 min-w-[140px]"
                 />
-                <button
-                  onClick={()=>addItem(name,newItemText[name])}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-full text-sm font-medium shadow transition"
-                >
-                  Add
-                </button>
+                <button onClick={() => addItem(name, newItemText[name])}>Add</button>
               </div>
-              <ul className="mt-2 space-y-2">
-                {activeData[name]?.map(item => (
+
+              {/* Items */}
+              <ul className="space-y-2">
+                {activeList[name]?.map(item => (
                   <li key={item.name} className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={item.checked}
-                        onChange={()=>handleCheck(item.name)}
-                        className="h-5 w-5"
-                      />
-                      <span className={`text-lg ${item.checked ? 'checked' : ''}`}>{item.name}</span>
-                    </div>
-                    <button onClick={()=>deleteItem(item.name)} className="text-red-600 hover:text-red-800 shrink-0">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 5a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1zm4 0a1 1 0 011 1v7a1 1 0 11-2 0V8a1 1 0 011-1z" clipRule="evenodd"/>
-                      </svg>
-                    </button>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={item.checked} onChange={() => handleCheck(item.name)} />
+                      <span className={item.checked ? "checked" : ""}>{item.name}</span>
+                    </label>
+                    <button onClick={() => deleteItem(item.name)}>✕</button>
                   </li>
                 ))}
               </ul>
+
             </div>
           ))}
         </div>
-        <div className="arrow-btn arrow-left" onClick={prevGroup}>‹</div>
-        <div className="arrow-btn arrow-right" onClick={nextGroup}>›</div>
       </div>
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<GroceryApp />);
+ReactDOM.createRoot(document.getElementById("root")).render(<GroceryApp />);
+
 </script>
+
 </body>
 </html>
