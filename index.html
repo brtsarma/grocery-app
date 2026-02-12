@@ -221,11 +221,25 @@ li {
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
+  cursor: move;
+  user-select: none;
+  position: relative;
 }
 li:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateX(4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+li.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+li.drag-over {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(2px);
 }
 
 /* Delete Button Styling */
@@ -301,6 +315,8 @@ function GroceryApp() {
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [loginForm, setLoginForm] = React.useState({ username: "", password: "" });
   const [loginError, setLoginError] = React.useState("");
+  const [draggedItem, setDraggedItem] = React.useState(null);
+  const [draggedOverGroup, setDraggedOverGroup] = React.useState(null);
 
   /**********************
    * Firebase Sync
@@ -364,8 +380,16 @@ function GroceryApp() {
 
     const newVal = !checked;
 
-    Object.keys(newStores).forEach(s => newStores[s] = newStores[s].map(it => it.name === name ? { ...it, checked: newVal } : it));
-    Object.keys(newRecipes).forEach(r => newRecipes[r] = newRecipes[r].map(it => it.name === name ? { ...it, checked: newVal } : it));
+    Object.keys(newStores).forEach(s => {
+      newStores[s] = newStores[s].map(it => it.name === name ? { ...it, checked: newVal } : it);
+      // Sort items: unchecked first, then checked
+      newStores[s] = [...newStores[s].filter(item => !item.checked), ...newStores[s].filter(item => item.checked)];
+    });
+    Object.keys(newRecipes).forEach(r => {
+      newRecipes[r] = newRecipes[r].map(it => it.name === name ? { ...it, checked: newVal } : it);
+      // Sort items: unchecked first, then checked
+      newRecipes[r] = [...newRecipes[r].filter(item => !item.checked), ...newRecipes[r].filter(item => item.checked)];
+    });
 
     setStoreData(newStores);
     setRecipeData(newRecipes);
@@ -419,10 +443,16 @@ function GroceryApp() {
    **********************/
   const resetList = () => {
     const newStores = {};
-    Object.keys(masterStoreData).forEach(s => newStores[s] = masterStoreData[s].map(i => ({ ...i, checked: false })));
+    Object.keys(masterStoreData).forEach(s => {
+      // Reset to original order and uncheck all items
+      newStores[s] = masterStoreData[s].map(i => ({ ...i, checked: false }));
+    });
 
     const newRecipes = {};
-    Object.keys(masterRecipeData).forEach(r => newRecipes[r] = masterRecipeData[r].map(i => ({ ...i, checked: false })));
+    Object.keys(masterRecipeData).forEach(r => {
+      // Reset to original order and uncheck all items
+      newRecipes[r] = masterRecipeData[r].map(i => ({ ...i, checked: false }));
+    });
 
     setStoreData(newStores);
     setRecipeData(newRecipes);
@@ -505,6 +535,93 @@ function GroceryApp() {
   const logout = () => {
     setIsLoggedIn(false);
     localStorage.removeItem("groceryLoggedIn");
+  };
+
+  /**********************
+   * Drag and Drop Functions
+   **********************/
+  const handleDragStart = (e, item, groupName) => {
+    setDraggedItem({ item, groupName });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.innerHTML);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e, groupName) => {
+    e.preventDefault();
+    setDraggedOverGroup(groupName);
+  };
+
+  const handleDragLeave = () => {
+    setDraggedOverGroup(null);
+  };
+
+  const handleDrop = (e, targetGroupName, targetIndex) => {
+    e.preventDefault();
+    setDraggedOverGroup(null);
+    
+    if (!draggedItem) return;
+    
+    const { item: draggedItemData, groupName: sourceGroupName } = draggedItem;
+    
+    if (viewMode === "store") {
+      const newStores = JSON.parse(JSON.stringify(storeData));
+      const sourceList = [...newStores[sourceGroupName]];
+      const targetList = sourceGroupName === targetGroupName ? sourceList : [...newStores[targetGroupName]];
+      
+      // Remove from source
+      const draggedIndex = sourceList.findIndex(i => i.name === draggedItemData.name);
+      if (draggedIndex === -1) return;
+      
+      const [removed] = sourceList.splice(draggedIndex, 1);
+      
+      // Add to target
+      if (sourceGroupName === targetGroupName) {
+        sourceList.splice(targetIndex, 0, removed);
+        newStores[sourceGroupName] = sourceList;
+      } else {
+        targetList.splice(targetIndex, 0, removed);
+        newStores[sourceGroupName] = sourceList;
+        newStores[targetGroupName] = targetList;
+      }
+      
+      setStoreData(newStores);
+      saveToFirebase(newStores, null);
+    } else {
+      const newRecipes = JSON.parse(JSON.stringify(recipeData));
+      const sourceList = [...newRecipes[sourceGroupName]];
+      const targetList = sourceGroupName === targetGroupName ? sourceList : [...newRecipes[targetGroupName]];
+      
+      // Remove from source
+      const draggedIndex = sourceList.findIndex(i => i.name === draggedItemData.name);
+      if (draggedIndex === -1) return;
+      
+      const [removed] = sourceList.splice(draggedIndex, 1);
+      
+      // Add to target
+      if (sourceGroupName === targetGroupName) {
+        sourceList.splice(targetIndex, 0, removed);
+        newRecipes[sourceGroupName] = sourceList;
+      } else {
+        targetList.splice(targetIndex, 0, removed);
+        newRecipes[sourceGroupName] = sourceList;
+        newRecipes[targetGroupName] = targetList;
+      }
+      
+      setRecipeData(newRecipes);
+      saveToFirebase(null, newRecipes);
+    }
+    
+    setDraggedItem(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDraggedOverGroup(null);
   };
 
   /**********************
@@ -619,8 +736,18 @@ function GroceryApp() {
 
               {/* Items */}
               <ul className="space-y-2">
-                {activeList[name]?.map(item => (
-                  <li key={item.name} className="flex justify-between items-center">
+                {activeList[name]?.map((item, index) => (
+                  <li 
+                    key={item.name} 
+                    className={`flex justify-between items-center ${draggedOverGroup === name ? 'drag-over' : ''}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, item, name)}
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) => handleDragEnter(e, name)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, name, index)}
+                    onDragEnd={handleDragEnd}
+                  >
                     <label className="flex items-center gap-2">
                       <input type="checkbox" checked={item.checked} onChange={() => handleCheck(item.name)} />
                       <span className={item.checked ? "checked" : ""}>{item.name}</span>
