@@ -350,11 +350,15 @@ function GroceryApp() {
 
       setStoreData(loadedStores);
       setMasterStoreData(loadedStores);
-      setOriginalStoreOrder(JSON.parse(JSON.stringify(loadedStores)));
+      if (Object.keys(originalStoreOrder).length === 0) {
+        setOriginalStoreOrder(JSON.parse(JSON.stringify(loadedStores)));
+      }
 
       setRecipeData(loadedRecipes);
       setMasterRecipeData(loadedRecipes);
-      setOriginalRecipeOrder(JSON.parse(JSON.stringify(loadedRecipes)));
+      if (Object.keys(originalRecipeOrder).length === 0) {
+        setOriginalRecipeOrder(JSON.parse(JSON.stringify(loadedRecipes)));
+      }
 
       set(groceryRef, { stores: loadedStores, recipes: loadedRecipes });
     });
