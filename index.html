@@ -305,6 +305,8 @@ function GroceryApp() {
   const [recipeData, setRecipeData] = React.useState({});
   const [masterStoreData, setMasterStoreData] = React.useState({});
   const [masterRecipeData, setMasterRecipeData] = React.useState({});
+  const [originalStoreOrder, setOriginalStoreOrder] = React.useState({});
+  const [originalRecipeOrder, setOriginalRecipeOrder] = React.useState({});
   const [newItemText, setNewItemText] = React.useState({});
   const [newStoreName, setNewStoreName] = React.useState("");
   const [newRecipeName, setNewRecipeName] = React.useState("");
@@ -348,9 +350,11 @@ function GroceryApp() {
 
       setStoreData(loadedStores);
       setMasterStoreData(loadedStores);
+      setOriginalStoreOrder(JSON.parse(JSON.stringify(loadedStores)));
 
       setRecipeData(loadedRecipes);
       setMasterRecipeData(loadedRecipes);
+      setOriginalRecipeOrder(JSON.parse(JSON.stringify(loadedRecipes)));
 
       set(groceryRef, { stores: loadedStores, recipes: loadedRecipes });
     });
@@ -443,15 +447,15 @@ function GroceryApp() {
    **********************/
   const resetList = () => {
     const newStores = {};
-    Object.keys(masterStoreData).forEach(s => {
+    Object.keys(originalStoreOrder).forEach(s => {
       // Reset to original order and uncheck all items
-      newStores[s] = masterStoreData[s].map(i => ({ ...i, checked: false }));
+      newStores[s] = originalStoreOrder[s].map(i => ({ ...i, checked: false }));
     });
 
     const newRecipes = {};
-    Object.keys(masterRecipeData).forEach(r => {
+    Object.keys(originalRecipeOrder).forEach(r => {
       // Reset to original order and uncheck all items
-      newRecipes[r] = masterRecipeData[r].map(i => ({ ...i, checked: false }));
+      newRecipes[r] = originalRecipeOrder[r].map(i => ({ ...i, checked: false }));
     });
 
     setStoreData(newStores);
