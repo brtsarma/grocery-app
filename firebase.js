@@ -15,5 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const groceryRef = ref(db, "grocery");
+const reminderRef = ref(db, "remainder");
 
 export { groceryRef, set, onValue };
+
